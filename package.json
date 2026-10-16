@@ -1,0 +1,19 @@
+{
+  "name": "observatorio-hibrida",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Observatorio HIBRIDA de Datos Educativos: tablero departamental",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@observablehq/plot": "^0.6.17",
+    "d3": "^7.9.0"
+  },
+  "devDependencies": {
+    "vite": "^8.0.0"
+  }
+}
