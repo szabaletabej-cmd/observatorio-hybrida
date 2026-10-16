@@ -4,7 +4,7 @@ Tablero web del Observatorio HYBRIDA de Datos Educativos. Cruza bases oficiales 
 
 Secciones: Panorama · Redistribución · Reconocimiento · Representación · Cruces · Metodología.
 
-> Los datos incluidos ahora son **de demostración**. Se reemplazan con los reales al correr el notebook (ver abajo).
+Datos: SNIES 2015–2025, Saber 11 2015–2025, Saber TyT 2016–2025 y MinTIC internet fijo 2017–2023, para los 33 departamentos.
 
 ## Cómo funciona
 
@@ -17,12 +17,10 @@ Drive (bases oficiales)  →  notebook en Colab  →  tablero_datos.json  →  e
 
 ## Actualizar los datos
 
-1. Abre `notebooks/Observatorio_HIBRIDA_panel_departamental.ipynb` en Colab y ejecútalo.
+1. Abre `notebooks/Observatorio_HYBRIDA_procesamiento.ipynb` en Colab y ejecútalo. El código vive en Drive (`06 Observatorio – Bases de datos/observatorio_hybrida.py`); en este repositorio hay una copia en `notebooks/`.
 2. Descarga `tablero_datos.json` de la carpeta `_procesado/` en Drive.
 3. En GitHub, entra a `public/data/`, elige **Add file → Upload files**, sube el archivo (reemplaza el anterior) y confirma.
 4. Cloudflare publica la nueva versión sola en uno o dos minutos.
-
-El aviso de "datos de demostración" desaparece solo cuando el archivo viene del notebook.
 
 ## Publicar en Cloudflare Pages (una sola vez)
 
@@ -37,7 +35,7 @@ Cada cambio que se suba al repositorio se publica automáticamente.
 
 ## Sumar un indicador
 
-1. En el notebook: una función de carga para la fuente nueva, o una línea en la sección 10 si se calcula con lo que ya existe, más su ficha en `CATALOGO` (nombre, dimensión de la tríada, unidad, fuente, definición).
+1. En `observatorio_hybrida.py`: una función de carga para la fuente nueva (que devuelva el formato largo `anio | cod_depto | indicador | desagregacion | categoria | valor`), o una línea en los derivados si se calcula con lo que ya existe, más su ficha en `CATALOGO` (nombre, dimensión de la tríada, unidad, fuente, definición).
 2. Volver a correr el notebook y subir el nuevo `tablero_datos.json`.
 
 El tablero toma los indicadores del catálogo: aparecen solos en la pestaña de su dimensión, en Cruces y en Metodología.

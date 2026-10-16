@@ -1,19 +1,13 @@
 # %% [markdown]
-# # Observatorio HIBRIDA · Panel departamental v1
+# # Observatorio HYBRIDA · Panel departamental
 #
-# Este notebook lee las bases oficiales que están en **06 Observatorio – Bases de datos** (Drive), las armoniza por **departamento (código DANE) y año**, y deja en `_procesado/` las tablas que alimentan el tablero.
+# Lee las bases oficiales de **06 Observatorio – Bases de datos** (Drive), las armoniza por **departamento (código DANE) y año** y deja en `_procesado/` las tablas que alimentan el tablero.
 #
-# **Cómo usarlo**
-# 1. `Entorno de ejecución → Ejecutar todo`. La primera vez pide permiso para montar Drive.
-# 2. Revisa la salida de la sección **4. Inspección**: si alguna columna clave sale `None`, ajústala en `COLUMNAS` (sección 2).
-# 3. Los resultados quedan en `06 Observatorio – Bases de datos/_procesado/`.
+# Se ejecuta desde Colab con una sola línea:
+# `exec(open(glob.glob('/content/drive/MyDrive/HYBRIDA*/06 Observatorio*/observatorio_hybrida.py')[0], encoding='utf-8').read())`
 #
-# **Lógica para sumar variables:** todo termina en un solo formato largo:
-#
-# | anio | cod_depto | depto | indicador | desagregacion | categoria | valor |
-# |---|---|---|---|---|---|---|
-#
-# Una fuente nueva = una función `cargar_<fuente>()` que devuelva esa tabla + sus filas en `CATALOGO`. Nada más cambia. Ver sección 12.
+# Todo termina en un formato largo: anio | cod_depto | depto | indicador | desagregacion | categoria | valor.
+# Una fuente nueva = una función `cargar_<fuente>()` + sus fichas en `CATALOGO` (sección 13).
 
 # %% [markdown]
 # ## 1. Montar Drive y ubicar carpetas
@@ -67,7 +61,7 @@ CARPETAS = {
 }
 
 # Fuentes a procesar. Pon False para saltar una (útil mientras se prueba).
-ACTIVAS = {
+ACTIVAS = globals().get('ACTIVAS') or {
     'snies_matriculados': True,
     'snies_flujos':       True,
     'mintic_internet':    True,
@@ -76,11 +70,14 @@ ACTIVAS = {
 }
 
 # Si True, reutiliza lo ya procesado en _procesado/cache y no relee el archivo original.
-USAR_CACHE = True
+USAR_CACHE = globals().get('USAR_CACHE', True)
 
 # SNIES matrícula: semestre de referencia para el dato anual (stock).
-# 2 = segundo semestre. Si un año no tiene ese semestre se usa el último disponible (queda en el registro).
+# 2 = segundo semestre. Si un año no tiene ese semestre se omite por no ser comparable (queda en el registro).
 SEMESTRE_MATRICULA = 2
+
+# Calidad: un indicador-año se publica solo si tiene dato para al menos este número de departamentos
+MIN_DEPTOS = int(os.environ.get('HYBRIDA_MIN_DEPTOS', 10))
 
 # Tamaño de bloque para leer archivos grandes
 CHUNK = 250_000
@@ -158,15 +155,27 @@ def armonizar_depto(df, col_cod=None, col_nom=None):
     return df
 
 def buscar_col(cols, *opciones, excluir=()):
-    """Devuelve la primera columna cuyo nombre normalizado contiene todos los fragmentos de alguna opción."""
+    """Primera columna que coincide con alguna opción (en orden de prioridad).
+    Prefiere el nombre exacto; ignora columnas de código interno 'ID ...' salvo que se pidan."""
     ncols = {c: norm(c) for c in cols}
     for frags in opciones:
         if isinstance(frags, str):
             frags = (frags,)
+        exacto = '_'.join(frags)
         for c, n in ncols.items():
+            if n == exacto:
+                return c
+        for c, n in ncols.items():
+            if n.startswith('id_') and 'id' not in frags:
+                continue
             if all(f in n for f in frags) and not any(e in n for e in excluir):
                 return c
     return None
+
+def primera(cols, candidatos):
+    """Primera columna presente según el orden de 'candidatos' (nombres normalizados)."""
+    ncols = {norm(c): c for c in cols}
+    return next((ncols[k] for k in candidatos if k in ncols), None)
 
 def anio_desde(texto):
     m = re.search(r'(20\d{2})', str(texto))
@@ -229,12 +238,12 @@ def cat_nivel_academico(v):
 
 def cat_nivel_formacion(v):
     v = norm_val(v)
-    if 'TECNOLOG' in v: return 'Tecnológica'
-    if 'TECNICA' in v:  return 'Técnica profesional'
-    if 'UNIVERSIT' in v:return 'Universitaria'
-    if 'DOCTOR' in v:   return 'Doctorado'
-    if 'MAESTR' in v:   return 'Maestría'
+    if 'DOCTOR' in v:     return 'Doctorado'
+    if 'MAESTR' in v:     return 'Maestría'
     if 'ESPECIALIZ' in v: return 'Especialización'
+    if 'TECNOLOG' in v:   return 'Tecnológica'
+    if 'TECNIC' in v:     return 'Técnica profesional'
+    if 'UNIVERSIT' in v:  return 'Universitaria'
     return 'Otro'
 
 def cat_estrato(v):
@@ -254,7 +263,8 @@ def cat_zona(v):
 
 def cat_tecnologia(v):
     v = norm_val(v)
-    if 'FIBRA' in v: return 'Fibra óptica'
+    if 'HFC' in v or 'COAXIAL' in v: return 'Cable'
+    if 'FIBRA' in v or 'FIBER' in v or 'FTT' in v: return 'Fibra óptica'
     if 'CABLE' in v: return 'Cable'
     if 'DSL' in v:   return 'xDSL'
     if 'SATEL' in v: return 'Satelital'
@@ -389,8 +399,7 @@ for fuente in CARPETAS:
         else:
             _, lec = leer_texto_por_bloques(ej, lambda c: c)
             muestra = next(iter(lec)).head(5)
-        print(os.path.basename(ej))
-        print(list(muestra.columns))
+        print(os.path.basename(ej), '·', len(muestra.columns), 'columnas')
     except Exception as e:
         print('  no pude leer', os.path.basename(ej), '→', e)
 
@@ -414,13 +423,17 @@ def cargar_snies_matriculados():
             print('⚠ sin columna de matriculados en', os.path.basename(ruta)); continue
         df['v'] = a_numero(df[col_val]).fillna(0)
         df['anio'] = a_numero(df[col_anio]) if col_anio else np.nan
-        df['anio'] = pd.Series(df['anio'], index=df.index).fillna(anio_desde(ruta)).astype(int)
+        df['anio'] = pd.Series(df['anio'], index=df.index).fillna(anio_desde(os.path.basename(ruta))).astype(int)
         df['sem'] = a_numero(df[col_sem]).fillna(0).astype(int) if col_sem else 0
         df = armonizar_depto(df, col_cod, col_nom)
         # semestre de referencia por año
         for a, g in df.groupby('anio'):
             sems = sorted(g['sem'].unique())
-            s = SEMESTRE_MATRICULA if SEMESTRE_MATRICULA in sems else max(sems)
+            if SEMESTRE_MATRICULA not in sems:
+                print(f'  · {a}: sin semestre {SEMESTRE_MATRICULA}, se omite (dato parcial, no comparable)')
+                registrar('snies_matriculados', ruta, anio=a, omitido='sin semestre de referencia')
+                continue
+            s = SEMESTRE_MATRICULA
             g = g[g['sem'] == s].copy()
             dims = {
                 'sector': buscar_col(c, 'sector'),
@@ -437,6 +450,7 @@ def cargar_snies_matriculados():
             partes.append(agregar_suma(g, 'v', 'snies_matriculados', list(dims)))
             registrar('snies_matriculados', ruta, anio=a, semestre_usado=s, filas=len(g),
                       sin_depto=int(g['cod_depto'].isna().sum()))
+        print(f'  ✓ {os.path.basename(ruta)}')
     return pd.concat(partes, ignore_index=True) if partes else None
 
 # %% [markdown]
@@ -444,7 +458,10 @@ def cargar_snies_matriculados():
 # Son flujos: se suman los dos semestres del año. Cada archivo se identifica por su columna de valor.
 
 # %%
-FLUJOS = {'inscrit': 'snies_inscritos', 'admitid': 'snies_admitidos',
+# Fragmentos del nombre de la columna de valor (los archivos antiguos usan otros nombres:
+# 'Admitdos 2015', 'Admisiones 2017', 'Inscripciones 2017')
+FLUJOS = {'inscrit': 'snies_inscritos', 'inscripcion': 'snies_inscritos',
+          'admitid': 'snies_admitidos', 'admitd': 'snies_admitidos', 'admision': 'snies_admitidos',
           'primer_curso': 'snies_primer_curso', 'graduad': 'snies_graduados'}
 
 def cargar_snies_flujos():
@@ -464,7 +481,7 @@ def cargar_snies_flujos():
         col_anio = buscar_col(c, 'ano', excluir=('semestre',))
         df['v'] = a_numero(df[col_val]).fillna(0)
         df['anio'] = (a_numero(df[col_anio]) if col_anio else np.nan)
-        df['anio'] = pd.Series(df['anio']).fillna(anio_desde(ruta)).astype(int)
+        df['anio'] = pd.Series(df['anio']).fillna(anio_desde(os.path.basename(ruta))).astype(int)
         anios = tuple(sorted(df['anio'].unique()))
         if (indicador, anios) in vistos:
             print('⚠ duplicado, se omite:', os.path.basename(ruta)); continue
@@ -480,6 +497,7 @@ def cargar_snies_flujos():
                 df[d] = df[col].map(fn[d])
         partes.append(agregar_suma(df, 'v', indicador, list(dims)))
         registrar('snies_flujos', ruta, indicador=indicador, filas=len(df), sin_depto=int(df['cod_depto'].isna().sum()))
+        print(f'  ✓ {os.path.basename(ruta)} → {indicador}')
     return pd.concat(partes, ignore_index=True) if partes else None
 
 # %% [markdown]
@@ -518,6 +536,7 @@ def cargar_mintic_internet():
         d = d[d['trim'] == ult]
         partes.append(agregar_suma(d, 'v', 'mintic_accesos_internet_fijo', ['tecnologia', 'segmento']))
         registrar('mintic_internet', ruta, filas=n)
+        print(f'  ✓ {os.path.basename(ruta)}: {n:,} registros')
     return pd.concat(partes, ignore_index=True) if partes else None
 
 # %% [markdown]
@@ -531,12 +550,12 @@ def cargar_icfes(fuente, prefijo, cand_depto_cod, cand_depto_nom, cand_dims, can
         sel = {}
         def usecols(cols):
             f = COLUMNAS[fuente]
-            sel['cod'] = f.get('depto_cod') or next((c for c in cols if norm(c) in cand_depto_cod), None)
-            sel['nom'] = f.get('depto_nom') or next((c for c in cols if norm(c) in cand_depto_nom), None)
+            sel['nom'] = f.get('depto_nom') or primera(cols, cand_depto_nom)
+            sel['cod'] = f.get('depto_cod') or primera(cols, cand_depto_cod)
             sel['periodo'] = buscar_col(cols, 'periodo')
             sel['puntajes'] = [c for c in cols if re.search(r'(^punt_|_punt$|^punt_global)', norm(c)) and 'desemp' not in norm(c) and 'percentil' not in norm(c)]
-            sel['dims'] = {d: next((c for c in cols if norm(c) in opts), None) for d, (opts, _) in cand_dims.items()}
-            sel['bins'] = {b: next((c for c in cols if norm(c) == opt), None) for b, opt in cand_binarias.items()}
+            sel['dims'] = {d: primera(cols, opts) for d, (opts, _) in cand_dims.items()}
+            sel['bins'] = {b: primera(cols, [opt]) for b, opt in cand_binarias.items()}
             if ruta == archivos(fuente, ('txt', 'csv'))[0]:
                 print(f'  columnas {fuente}:', {k: v for k, v in sel.items() if k != 'puntajes'}, '| puntajes:', sel['puntajes'])
             return [sel['cod'], sel['nom'], sel['periodo'], *sel['puntajes'],
@@ -584,24 +603,25 @@ def cargar_icfes(fuente, prefijo, cand_depto_cod, cand_depto_nom, cand_dims, can
 def cargar_saber_11():
     return cargar_icfes(
         'saber_11', 's11',
-        cand_depto_cod={'cole_cod_depto_ubicacion', 'cole_cod_dane_depto'},
-        cand_depto_nom={'cole_depto_ubicacion'},
-        cand_dims={'naturaleza': ({'cole_naturaleza'}, cat_sector),
-                   'zona': ({'cole_area_ubicacion'}, cat_zona),
-                   'sexo': ({'estu_genero'}, cat_sexo),
-                   'estrato': ({'fami_estratovivienda'}, cat_estrato)},
+        cand_depto_cod=['cole_cod_depto_ubicacion', 'cole_cod_dane_depto'],
+        cand_depto_nom=['cole_depto_ubicacion'],
+        cand_dims={'naturaleza': (['cole_naturaleza'], cat_sector),
+                   'zona': (['cole_area_ubicacion'], cat_zona),
+                   'sexo': (['estu_genero'], cat_sexo),
+                   'estrato': (['fami_estratovivienda'], cat_estrato)},
         cand_binarias={'internet_hogar': 'fami_tieneinternet', 'computador_hogar': 'fami_tienecomputador'},
     )
 
 def cargar_saber_tyt():
     return cargar_icfes(
         'saber_tyt', 'tyt',
-        cand_depto_cod={'estu_inst_cod_departamento', 'estu_cod_depto_presentacion', 'estu_cod_reside_depto'},
-        cand_depto_nom={'estu_inst_departamento', 'estu_depto_presentacion', 'estu_depto_reside'},
-        cand_dims={'sexo': ({'estu_genero'}, cat_sexo),
-                   'estrato': ({'fami_estratovivienda'}, cat_estrato),
-                   'naturaleza': ({'inst_origen'}, cat_sector),
-                   'modalidad': ({'estu_metodo_prgm'}, cat_modalidad)},
+        # Departamento donde se ofrece el programa (mismo criterio que SNIES); si no existe, el de la institución
+        cand_depto_cod=[],
+        cand_depto_nom=['estu_prgm_departamento', 'estu_inst_departamento', 'estu_depto_presentacion'],
+        cand_dims={'sexo': (['estu_genero'], cat_sexo),
+                   'estrato': (['fami_estratovivienda'], cat_estrato),
+                   'naturaleza': (['inst_origen'], cat_sector),
+                   'modalidad': (['estu_metodo_prgm'], cat_modalidad)},
         cand_binarias={'internet_hogar': 'fami_tieneinternet', 'computador_hogar': 'fami_tienecomputador'},
     )
 
@@ -707,7 +727,7 @@ CATALOGO = [
     ('snies_pct_tecnica_tecnologica', 'Matrícula técnica y tecnológica', 'Redistribución', '%', 'SNIES – MEN', '(Técnica profesional + tecnológica) / total × 100.'),
     ('snies_graduados_por_100_matriculados', 'Graduados por cada 100 matriculados', 'Reconocimiento', 'razón', 'SNIES – MEN', 'Graduados del año / matrícula del año × 100. Aproximación, no es tasa de graduación por cohorte.'),
     ('absorcion_aprox', 'Absorción aproximada', 'Redistribución', '%', 'SNIES – MEN; Icfes', 'Primer curso pregrado (t+1) / evaluados Saber 11 calendario A (t) × 100. Proxy: no sigue a las mismas personas.'),
-    ('mintic_accesos_internet_fijo', 'Accesos a internet fijo', 'Redistribución', 'accesos', 'MinTIC – Colombia TIC', 'Accesos del último trimestre del año. Sin población aún: no es tasa por 100 habitantes.'),
+    ('mintic_accesos_internet_fijo', 'Accesos a internet fijo', 'Redistribución', 'accesos', 'MinTIC – Colombia TIC', 'Accesos del último trimestre disponible de cada año. Sin población aún: no es tasa por 100 habitantes.'),
     ('mintic_pct_fibra', 'Accesos por fibra óptica', 'Redistribución', '%', 'MinTIC – Colombia TIC', 'Accesos de fibra / total × 100.'),
     ('mintic_pct_residencial_1_2', 'Accesos residenciales estratos 1-2', 'Redistribución', '%', 'MinTIC – Colombia TIC', 'Accesos residenciales estratos 1 y 2 / total × 100.'),
     ('s11_evaluados', 'Evaluados Saber 11 (calendario A)', 'Reconocimiento', 'personas', 'Icfes – DataIcfes', 'Estudiantes evaluados en el periodo 2 del año, por departamento del colegio.'),
@@ -716,7 +736,7 @@ CATALOGO = [
     ('s11_brecha_oficial_privado', 'Brecha Saber 11 oficial – privado', 'Reconocimiento', 'puntos', 'Icfes – DataIcfes', 'Puntaje global promedio oficial − privado.'),
     ('s11_brecha_rural_urbana', 'Brecha Saber 11 rural – urbana', 'Reconocimiento', 'puntos', 'Icfes – DataIcfes', 'Puntaje global promedio rural − urbano.'),
     ('s11_brecha_internet_estrato', 'Brecha de internet en el hogar, estrato 1-2 vs 5-6', 'Redistribución', 'puntos %', 'Icfes – DataIcfes', '% con internet estrato 1-2 − % estrato 5-6.'),
-    ('tyt_evaluados', 'Evaluados Saber TyT', 'Reconocimiento', 'personas', 'Icfes – DataIcfes', 'Evaluados del año por departamento de la institución.'),
+    ('tyt_evaluados', 'Evaluados Saber TyT', 'Reconocimiento', 'personas', 'Icfes – DataIcfes', 'Evaluados del año por departamento donde se ofrece el programa.'),
     ('tyt_pct_internet_hogar', 'Evaluados TyT con internet en el hogar', 'Redistribución', '%', 'Icfes – DataIcfes', 'Respuestas "Sí" / respuestas válidas × 100.'),
     ('tyt_pct_computador_hogar', 'Evaluados TyT con computador en el hogar', 'Redistribución', '%', 'Icfes – DataIcfes', 'Respuestas "Sí" / respuestas válidas × 100.'),
 ]
@@ -728,6 +748,7 @@ for ind in sorted(set(panel.indicador) - set(cat.indicador)):
     if ind.endswith('_prom'):
         prueba = 'Saber 11' if ind.startswith('s11') else 'Saber TyT'
         modulo = ind.split('_', 1)[1].replace('_prom', '').replace('punt_', '').replace('mod_', '').replace('_punt', '').replace('_', ' ')
+        modulo = {'c naturales': 'ciencias naturales', 'ingles': 'inglés', 'lectura critica': 'lectura crítica', 'matematicas': 'matemáticas', 'sociales ciudadanas': 'sociales y ciudadanas', 'competen ciudada': 'competencias ciudadanas', 'comuni escrita': 'comunicación escrita', 'razona cuantitat': 'razonamiento cuantitativo'}.get(modulo, modulo)
         extra.append((ind, f'{prueba}: puntaje promedio {modulo}', 'Reconocimiento', 'puntos', 'Icfes – DataIcfes',
                       f'Promedio del puntaje {modulo} entre evaluados con puntaje válido.'))
 cat = pd.concat([cat, pd.DataFrame(extra, columns=cat.columns)], ignore_index=True)
@@ -742,11 +763,16 @@ if sin_ficha:
 # Revisa cobertura (cuántos departamentos tiene cada indicador por año) y guarda todo en `_procesado/`.
 
 # %%
+# Calidad: se descartan indicador-año con menos de MIN_DEPTOS departamentos (series incompletas)
+_n = panel[panel.desagregacion == 'total'].groupby(['indicador', 'anio'])['cod_depto'].nunique()
+_ok = set(_n[_n >= MIN_DEPTOS].index)
+panel = panel[[(i, a) in _ok for i, a in zip(panel.indicador, panel.anio)]]
+
 cobertura = (panel[panel.desagregacion == 'total']
              .groupby(['indicador', 'anio'])['cod_depto'].nunique()
              .unstack('anio'))
 print('Departamentos con dato por indicador y año (máximo 33):')
-display(cobertura) if EN_COLAB else print(cobertura.to_string())
+print(cobertura.fillna(0).astype(int).to_string())
 
 ancho = (panel[panel.desagregacion == 'total']
          .pivot_table(index=['anio', 'cod_depto', 'depto'], columns='indicador', values='valor')
