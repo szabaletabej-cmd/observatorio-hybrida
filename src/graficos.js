@@ -6,32 +6,34 @@ export const oscuro = () =>
   document.documentElement.dataset.theme === "dark" ||
   (document.documentElement.dataset.theme !== "light" && matchMedia("(prefers-color-scheme: dark)").matches);
 
-// Paleta de referencia (validada): categórica, secuencial azul, divergente azul–rojo
+// Paleta derivada del manual de marca HYBRIDA (Azul Académico #10357A, Púrpura Innovación #800080).
+// Categórica validada para daltonismo (orden fijo). Púrpura = selección del usuario.
 export function paleta() {
   const d = oscuro();
   return {
-    serie: d ? ["#3987e5", "#d95926", "#199e70", "#c98500", "#d55181", "#008300", "#9085e9", "#e66767"]
-             : ["#2a78d6", "#eb6834", "#1baf7a", "#eda100", "#e87ba4", "#008300", "#6250d6", "#e34948"],
-    secuencial: d ? ["#184f95", "#256abf", "#3987e5", "#6da7ec", "#9ec5f4"]
-                  : ["#b7d3f6", "#86b6ef", "#5598e7", "#2a78d6", "#1c5cab"],
-    divergente: d ? ["#e66767", "#8e4a49", "#383835", "#3d6aa3", "#6da7ec"]
-                  : ["#c43a39", "#ec9a99", "#f0efec", "#86b6ef", "#1c5cab"],
-    suave: d ? "#256abf" : "#9ec5f4",
-    fuerte: d ? "#9ec5f4" : "#1c5cab",
-    gris: d ? "#383835" : "#d6d5cf",
-    sinDato: d ? "#232322" : "#ecebe6",
-    superficie: d ? "#1a1a19" : "#fcfcfb",
-    tinta: d ? "#f0efec" : "#0b0b0b",
-    tinta2: d ? "#c3c2b7" : "#52514e",
-    tinta3: "#898781",
-    eje: d ? "#383835" : "#c3c2b7",
+    serie: d ? ["#3987e5", "#d95926", "#c050c0", "#199e70", "#c98500", "#008300"]
+             : ["#2659b8", "#e06a1f", "#9a2a9a", "#0f9e9e", "#c99400", "#2e8b3e"],
+    secuencial: d ? ["#1a2c4f", "#24467f", "#3563ad", "#6e93d4", "#b3c7ee"]
+                  : ["#c9d7ee", "#93acd9", "#5a7fc0", "#2d58a3", "#10357A"],
+    // brechas: negativo en naranja, positivo en azul de marca, cero en gris
+    divergente: d ? ["#e07a3f", "#7a4a2c", "#3a3c42", "#3a5f9c", "#8fb0ea"]
+                  : ["#b8501c", "#efae86", "#eceef2", "#93acd9", "#10357A"],
+    suave: d ? "#2f5594" : "#a9bde3",
+    seleccion: d ? "#d58ad5" : "#800080",
+    gris: d ? "#3a3d44" : "#d7dbe4",
+    sinDato: d ? "#2a2c30" : "#eef0f4",
+    superficie: d ? "#232427" : "#ffffff",
+    tinta: d ? "#f2f2f4" : "#1A1A1A",
+    tinta2: d ? "#c3c6cf" : "#4a4f5c",
+    tinta3: d ? "#8d919c" : "#7a7f8c",
+    eje: d ? "#45484f" : "#c4c9d6",
   };
 }
 
 const base = () => {
   const p = paleta();
   return {
-    style: {fontFamily: "system-ui, -apple-system, 'Segoe UI', sans-serif", fontSize: "12px", color: p.tinta2, background: "transparent", overflow: "visible"},
+    style: {fontFamily: "'Source Sans 3', system-ui, -apple-system, 'Segoe UI', sans-serif", fontSize: "12.5px", color: p.tinta2, background: "transparent", overflow: "visible"},
   };
 };
 
@@ -69,7 +71,7 @@ function leyenda(color, info, ancho = 260) {
   cont.append(Plot.legend({
     color: {...color, legend: "ramp", label: null, tickFormat: fmt},
     width: ancho, height: 44, marginTop: 6, marginLeft: 8, marginRight: 14,
-    style: {background: "transparent", color: p.tinta2, fontSize: "11px", fontFamily: "system-ui"},
+    style: {background: "transparent", color: p.tinta2, fontSize: "11px", fontFamily: "'Source Sans 3', system-ui"},
   }));
   const u = document.createElement("p");
   u.className = "nota";
@@ -92,7 +94,7 @@ export function mapa({geo, valores, info, deptos, width, altura, seleccion, alEl
 
   const capas = (features, conTip) => [
     Plot.geo(features, {fill: (f) => valor(f), stroke: p.superficie, strokeWidth: compacto ? 0.6 : 0.9}),
-    seleccion ? Plot.geo(features.filter((f) => f.properties.cod === seleccion), {stroke: p.tinta, strokeWidth: 2}) : null,
+    seleccion ? Plot.geo(features.filter((f) => f.properties.cod === seleccion), {stroke: p.seleccion, strokeWidth: 2.5}) : null,
     conTip
       ? Plot.tip(features, Plot.pointer(Plot.geoCentroid({
           title: (f) => `${formatear(valor(f), info.unidad)}\n${deptos[f.properties.cod]}`,
@@ -118,7 +120,7 @@ export function mapa({geo, valores, info, deptos, width, altura, seleccion, alEl
     ...base(), width: tam, height: tam, margin: 0, x: {axis: null, domain: [0, 1]}, y: {axis: null, domain: [0, 1]},
     color,
     marks: cod88 ? [
-      Plot.dot([cod88], {x: () => 0.5, y: () => 0.5, r: compacto ? 9 : 12, fill: (f) => valor(f), stroke: seleccion === "88" ? p.tinta : p.superficie, strokeWidth: 2}),
+      Plot.dot([cod88], {x: () => 0.5, y: () => 0.5, r: compacto ? 9 : 12, fill: (f) => valor(f), stroke: seleccion === "88" ? p.seleccion : p.superficie, strokeWidth: 2.5}),
       Plot.tip([cod88], Plot.pointer({x: () => 0.5, y: () => 0.5, fill: p.superficie, maxRadius: 30,
         title: (f) => `${formatear(valor(f), info.unidad)}\n${deptos["88"]}`})),
     ] : [],
@@ -163,9 +165,8 @@ export function ranking({valores, info, deptos, width, seleccion, alElegir}) {
       Plot.gridX({stroke: p.gris, strokeOpacity: 1}),
       Plot.barX(datos, {
         x: "v", y: "depto", insetTop: 2.5, insetBottom: 2.5, rx: 3,
-        fill: (d) => brecha
-          ? (d.v < 0 ? p.divergente[d.cod === seleccion ? 0 : 1] : p.divergente[d.cod === seleccion ? 4 : 3])
-          : (d.cod === seleccion ? p.fuerte : p.suave),
+        fill: (d) => d.cod === seleccion ? p.seleccion
+          : brecha ? (d.v < 0 ? p.divergente[1] : p.divergente[3]) : p.suave,
       }),
       Plot.ruleX([0], {stroke: p.tinta3}),
       // Valor junto al extremo positivo; si es negativo, al lado derecho del cero (zona libre)
@@ -193,7 +194,7 @@ export function evolucion({D, ind, info, width, seleccion}) {
   const mediana = anios.map((anio) => ({anio, valor: d3.median(todos.filter((d) => d.anio === anio), (d) => d.valor)}));
   const elegido = seleccion ? todos.filter((d) => d.cod === seleccion) : [];
   const series = [{nombre: "Mediana departamental", color: p.tinta2}];
-  if (seleccion) series.unshift({nombre: D.deptos[seleccion], color: p.serie[0]});
+  if (seleccion) series.unshift({nombre: D.deptos[seleccion], color: p.seleccion});
   const ultimo = (arr) => arr[arr.length - 1];
 
   const pl = Plot.plot({
@@ -205,8 +206,8 @@ export function evolucion({D, ind, info, width, seleccion}) {
       esBrecha(info) ? Plot.ruleY([0], {stroke: p.tinta3}) : null,
       Plot.lineY(todos, {x: "anio", y: "valor", z: "cod", stroke: p.gris, strokeWidth: 1}),
       Plot.lineY(mediana, {x: "anio", y: "valor", stroke: p.tinta2, strokeWidth: 2}),
-      Plot.lineY(elegido, {x: "anio", y: "valor", stroke: p.serie[0], strokeWidth: 2.5}),
-      Plot.dot(elegido.length ? [ultimo(elegido)] : [], {x: "anio", y: "valor", r: 4.5, fill: p.serie[0], stroke: p.superficie, strokeWidth: 2}),
+      Plot.lineY(elegido, {x: "anio", y: "valor", stroke: p.seleccion, strokeWidth: 2.5}),
+      Plot.dot(elegido.length ? [ultimo(elegido)] : [], {x: "anio", y: "valor", r: 4.5, fill: p.seleccion, stroke: p.superficie, strokeWidth: 2}),
       Plot.text(elegido.length ? [ultimo(elegido)] : [], {x: "anio", y: "valor", text: (d) => formatear(d.valor, info.unidad, {corto: true}), dx: 9, textAnchor: "start", fill: p.tinta, fontWeight: 600}),
       Plot.ruleX(todos, Plot.pointerX({x: "anio", stroke: p.tinta3, strokeWidth: 1})),
       Plot.tip(anios.map((anio) => ({
@@ -235,7 +236,7 @@ export function desagregacion({D, ind, info, des, cod, width}) {
     }
   }
   if (!datos.length) return vacio("Sin datos para esta selección.");
-  const colores = cats.map((_, i) => p.serie[i % 8]);
+  const colores = cats.map((_, i) => p.serie[i % p.serie.length]);
   const finales = cats.map((cat) => datos.filter((d) => d.cat === cat).at(-1)).filter(Boolean);
   const pl = Plot.plot({
     ...base(), width, height: 280, marginLeft: 56, marginRight: 30, marginTop: 16,
@@ -271,7 +272,7 @@ export function dispersion({X, Y, infoX, infoY, deptos, width, seleccion, alEleg
       Plot.gridX({stroke: p.gris, strokeOpacity: 1}),
       Plot.gridY({stroke: p.gris, strokeOpacity: 1}),
       Plot.linearRegressionY(datos, {x: "x", y: "y", stroke: p.tinta3, strokeWidth: 1.5, ci: 0}),
-      Plot.dot(datos, {x: "x", y: "y", r: 6, fill: (d) => (d.cod === seleccion ? p.serie[1] : p.serie[0]), fillOpacity: 0.9, stroke: p.superficie, strokeWidth: 2}),
+      Plot.dot(datos, {x: "x", y: "y", r: 6, fill: (d) => (d.cod === seleccion ? p.seleccion : p.serie[0]), fillOpacity: 0.9, stroke: p.superficie, strokeWidth: 2}),
       Plot.text(etiquetados, {x: "x", y: "y", text: "depto", dy: -14, fill: p.tinta, fontWeight: 600}),
       Plot.tip(datos, Plot.pointer({
         x: "x", y: "y", fill: p.superficie, maxRadius: 30,

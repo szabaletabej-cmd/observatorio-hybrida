@@ -1,6 +1,6 @@
-# Observatorio HIBRIDA · Tablero departamental
+# Observatorio HYBRIDA · Tablero departamental
 
-Tablero web del Observatorio HIBRIDA de Datos Educativos. Cruza bases oficiales (SNIES, Icfes, MinTIC) por departamento y año, organizadas según la tríada **redistribución, reconocimiento y representación**.
+Tablero web del Observatorio HYBRIDA de Datos Educativos. Cruza bases oficiales (SNIES, Icfes, MinTIC) por departamento y año, organizadas según la tríada **redistribución, reconocimiento y representación**.
 
 Secciones: Panorama · Redistribución · Reconocimiento · Representación · Cruces · Metodología.
 
@@ -55,12 +55,22 @@ npm run build    # genera dist/
 ```
 public/data/tablero_datos.json   datos del tablero (sale del notebook)
 public/data/departamentos.json   límites departamentales (DANE, MGN 2018, simplificados)
+public/marca/                    isotipo y logo del Centro de Pensamiento
 src/main.js                      vistas y navegación
 src/graficos.js                  mapa, ranking, evolución, desagregación, dispersión, correlaciones
 src/datos.js                     carga, índices y agregado nacional
 src/estilos.css                  estilos (modo claro y oscuro)
 notebooks/                       procesamiento reproducible en Colab
 ```
+
+## Identidad visual
+
+Sigue el Manual de Marca del Centro de Pensamiento HYBRIDA:
+
+- **Colores:** Azul Académico `#10357A` (estructura, títulos, mapas), Púrpura Innovación `#800080` (enlaces, controles y el departamento seleccionado), Negro Profundo `#1A1A1A` y blanco (fondos), en proporción 70-30-10. El degradado azul–púrpura solo aparece en la franja superior y en la portada.
+- **Tipografía:** Poppins para marca y títulos; Source Sans 3 para texto y datos. Ambas van incluidas en el sitio, sin depender de Google Fonts.
+- **Logo:** `public/marca/` (isotipo y logo completo). En modo oscuro se usa la versión de un tono en negativo, como indica el manual.
+- **Gráficos:** escala secuencial en azules de marca; brechas en naranja (negativo) y azul (positivo); paleta categórica validada para daltonismo. Los tokens están en `src/estilos.css` y `src/graficos.js` (función `paleta`).
 
 ## Ciencia abierta
 

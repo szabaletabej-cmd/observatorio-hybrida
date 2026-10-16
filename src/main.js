@@ -1,3 +1,8 @@
+import "@fontsource/poppins/latin-500.css";
+import "@fontsource/poppins/latin-600.css";
+import "@fontsource/source-sans-3/latin-400.css";
+import "@fontsource/source-sans-3/latin-600.css";
+import "@fontsource/source-sans-3/latin-700.css";
 import "./estilos.css";
 import * as d3 from "d3";
 import {cargarDatos, formatear, signoPct, NOMBRES_DESAG, ORDEN_DIM} from "./datos.js";
@@ -97,10 +102,11 @@ function tablaDatos(cols, filas, nombreArchivo) {
 
 // ---------- vistas ----------
 function vistaPanorama(main) {
-  main.append(
+  main.append(el("section", {class: "portada"},
+    el("span", {class: "chip"}, "Tablero 1 · Educación superior y conectividad"),
     el("h1", {}, "Brechas educativas por departamento"),
-    el("p", {class: "bajada"}, "Panel armonizado del Observatorio HIBRIDA a partir de bases oficiales y abiertas (SNIES, Icfes y MinTIC). Los indicadores se organizan según la tríada de la Declaración fundacional: redistribución, reconocimiento y representación."),
-  );
+    el("p", {class: "bajada"}, "Panel armonizado del Observatorio HYBRIDA a partir de bases oficiales y abiertas (SNIES, Icfes y MinTIC). Los indicadores se organizan según la tríada de la Declaración fundacional: redistribución, reconocimiento y representación."),
+  ));
   const datos = el("div", {class: "rejilla r4"});
   for (const ind of PANORAMA_DATOS.filter((i) => D.info.has(i))) {
     const info = D.info.get(ind);
@@ -323,7 +329,7 @@ function render() {
     vistaCruces(main);
   } else if (vista.ruta === "metodologia") vistaMetodologia(main);
   else vistaPanorama(main);
-  document.title = `${vista.nombre} · Observatorio HIBRIDA`;
+  document.title = `${vista.nombre} · Observatorio HYBRIDA`;
   scrollTo(0, ruta === render.ultima ? y : 0);
   render.ultima = ruta;
 }
