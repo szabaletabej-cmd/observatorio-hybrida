@@ -312,7 +312,9 @@ function vistaExplorador(main, dim) {
   const anios = D.anios(ind);
   const anio = anios.includes(estado.anio) ? estado.anio : anios.at(-1);
   estado.contextoImg = `${info.nombre} ${anio}`;
-  const desOps = [...(D.desagregaciones.get(ind)?.keys() ?? [])];
+  // No se desagrega un porcentaje por la misma variable que lo define (p. ej. % étnico por etnia = 100 %)
+  const TAUTOLOGIA = {etnia: /pct_etnia/, discapacidad: /pct_discapacidad/, grupo_edad: /extraedad|mayor_25/, sexo: /pct_mujeres/};
+  const desOps = [...(D.desagregaciones.get(ind)?.keys() ?? [])].filter((d) => !TAUTOLOGIA[d]?.test(ind));
   const des = desOps.includes(estado.des[ind]) ? estado.des[ind] : desOps[0];
   const dep = estado.dep;
   const rerender = () => render();

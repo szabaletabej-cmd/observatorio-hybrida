@@ -234,7 +234,7 @@ export function evolucion({D, ind, info, width, seleccion}) {
 // ---------- Desagregación en el tiempo ----------
 export function desagregacion({D, ind, info, des, cod, width}) {
   const p = paleta();
-  const cats = (D.desagregaciones.get(ind)?.get(des) ?? []).filter((c) => !/^Sin /.test(c));
+  const cats = (D.desagregaciones.get(ind)?.get(des) ?? []).filter((c) => c !== "Sin información");
   if (!cats.length) return vacio("Este indicador no tiene esa desagregación.");
   const datos = [];
   for (const cat of cats) {
