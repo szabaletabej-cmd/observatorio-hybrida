@@ -22,7 +22,7 @@ jobs:
       - name: Revisar si hay clave de Cloudflare
         if: ${{ env.CF_TOKEN == '' }}
         run: echo "::notice::Sin CLOUDFLARE_API_TOKEN todavía; se omite la publicación automática (no es un error)."
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         if: ${{ env.CF_TOKEN != '' }}
       - uses: actions/setup-node@v4
         if: ${{ env.CF_TOKEN != '' }}
