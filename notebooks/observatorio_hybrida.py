@@ -558,7 +558,9 @@ def cat_etnia(v):
     if any(k in v for k in ('AFRO', 'NEGR', 'PALENQ', 'RAIZAL')): return 'Afro, negro, raizal o palenquero'
     if 'ROM' in v or 'GITAN' in v: return 'Rrom'
     if v in ('SI', 'S'): return 'Grupo étnico (sin especificar)'
-    return 'Otro grupo étnico'
+    if 'OTRO' in v: return 'Otro grupo étnico'
+    # En varios años el Icfes lista pueblos indígenas por nombre (Wayuu, Zenú, Embera, Nasa, Pastos...)
+    return 'Indígena'
 
 def bin_etnia(v):
     c = cat_etnia(v)
