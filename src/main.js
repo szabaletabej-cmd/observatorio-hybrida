@@ -6,9 +6,11 @@ import "@fontsource/source-sans-3/latin-700.css";
 import "./estilos.css";
 import * as d3 from "d3";
 import {cargarDatos, formatear, signoPct, NOMBRES_DESAG, ORDEN_DIM} from "./datos.js";
-import {mapa, ranking, evolucion, desagregacion, dispersion, matrizCorrelacion, vacio} from "./graficos.js";
+import {mapa, ranking, evolucion, desagregacion, dispersion, matrizCorrelacion, vacio, paleta} from "./graficos.js";
+import {GRUPOS, GUIA, FUENTES} from "./guia.js";
 
 const VISTAS = [
+  {ruta: "esencial", nombre: "Lo esencial"},
   {ruta: "panorama", nombre: "Panorama"},
   {ruta: "redistribucion", nombre: "Redistribución", dim: "Redistribución"},
   {ruta: "reconocimiento", nombre: "Reconocimiento", dim: "Reconocimiento"},
@@ -101,6 +103,91 @@ function tablaDatos(cols, filas, nombreArchivo) {
 }
 
 // ---------- vistas ----------
+function cambioTexto(v, v0, unidad) {
+  if (v == null || v0 == null) return "";
+  if (unidad === "%" || unidad === "puntos %") return formatear(v - v0, "puntos %");
+  if (unidad === "puntos" || unidad === "razón") return (v - v0 > 0 ? "+" : "") + formatear(v - v0, "razón") + (unidad === "puntos" ? " pts" : "");
+  return signoPct(100 * (v / v0 - 1));
+}
+
+function minigrafico(serie, ancho = 220, alto = 46) {
+  const p = paleta();
+  const ns = "http://www.w3.org/2000/svg";
+  const svg = document.createElementNS(ns, "svg");
+  svg.setAttribute("viewBox", `0 0 ${ancho} ${alto}`);
+  svg.setAttribute("width", "100%");
+  svg.setAttribute("height", alto);
+  svg.setAttribute("aria-hidden", "true");
+  const ok = serie.filter((d) => d.valor != null);
+  if (ok.length < 2) return svg;
+  const x = d3.scaleLinear(d3.extent(ok, (d) => d.anio), [4, ancho - 4]);
+  const ext = d3.extent(ok, (d) => d.valor);
+  const pad = (ext[1] - ext[0]) * 0.15 || Math.abs(ext[0]) * 0.05 || 1;
+  const y = d3.scaleLinear([ext[0] - pad, ext[1] + pad], [alto - 4, 4]);
+  const path = document.createElementNS(ns, "path");
+  path.setAttribute("d", d3.line((d) => x(d.anio), (d) => y(d.valor))(ok));
+  path.setAttribute("fill", "none");
+  path.setAttribute("stroke", p.serie[0]);
+  path.setAttribute("stroke-width", "2");
+  path.setAttribute("stroke-linejoin", "round");
+  svg.append(path);
+  const u = ok.at(-1);
+  const c = document.createElementNS(ns, "circle");
+  c.setAttribute("cx", x(u.anio)); c.setAttribute("cy", y(u.valor)); c.setAttribute("r", 3.5);
+  c.setAttribute("fill", p.serie[0]);
+  svg.append(c);
+  return svg;
+}
+
+function tarjetaClave(ind) {
+  const info = D.info.get(ind);
+  const g = GUIA[ind];
+  const anios = D.anios(ind);
+  const a = anios.at(-1), a0 = anios[0];
+  const v = D.nacional(ind, a), v0 = D.nacional(ind, a0);
+  const serie = anios.map((x) => ({anio: x, valor: D.nacional(ind, x)}));
+  const vals = [...D.valores(ind, a)].filter(([, x]) => x != null);
+  const orden = g.cercaCero ? vals.sort((p, q) => Math.abs(p[1]) - Math.abs(q[1])) : vals.sort((p, q) => q[1] - p[1]);
+  const [alto, bajo] = [orden[0], orden.at(-1)];
+  const f = (x) => formatear(x, info.unidad, {corto: true});
+  const ir = () => irA(info, ind);
+  return el("article", {class: "tarjeta clave", tabindex: 0, role: "link", onclick: ir, onkeydown: (e) => e.key === "Enter" && ir()},
+    el("h3", {}, g.corto),
+    el("div", {class: "clave-valor"}, el("span", {class: "dato-valor"}, f(v)), el("span", {class: "clave-anio"}, `Colombia, ${a}`)),
+    minigrafico(serie),
+    el("div", {class: "clave-cambio"}, a0 !== a ? `Desde ${a0}: ${cambioTexto(v, v0, info.unidad)}` : ""),
+    alto && bajo ? el("dl", {class: "clave-extremos"},
+      el("dt", {}, g.extremo[0]), el("dd", {}, `${D.deptos[alto[0]]} · ${f(alto[1])}`),
+      el("dt", {}, g.extremo[1]), el("dd", {}, `${D.deptos[bajo[0]]} · ${f(bajo[1])}`)) : null,
+    el("p", {class: "clave-para"}, g.para),
+    el("span", {class: "clave-ir"}, "Ver mapa y detalle →"));
+}
+
+function vistaEsencial(main) {
+  main.append(el("section", {class: "portada"},
+    el("span", {class: "chip"}, "Observatorio HYBRIDA de datos educativos"),
+    el("h1", {}, "Lo esencial en 12 indicadores"),
+    el("p", {class: "bajada"}, "Una lectura rápida de las brechas educativas en Colombia a partir de datos oficiales. Cada tarjeta muestra el dato nacional más reciente, cómo ha cambiado y qué departamentos están en los extremos. Haz clic en una para ver el mapa."),
+  ));
+  for (const grupo of GRUPOS) {
+    const inds = grupo.indicadores.filter((i) => D.info.has(i) && GUIA[i]);
+    if (!inds.length) continue;
+    main.append(el("section", {class: "grupo-clave"},
+      el("h2", {}, grupo.pregunta),
+      el("p", {class: "bajada"}, grupo.texto),
+      el("div", {class: "rejilla r-clave"}, inds.map(tarjetaClave))));
+  }
+  main.append(el("section", {class: "grupo-clave"},
+    el("h2", {}, "¿De dónde salen los datos?"),
+    el("p", {class: "bajada"}, "Cuatro bases oficiales y abiertas. Cada una responde una pregunta distinta."),
+    el("div", {class: "rejilla r4"}, FUENTES.map((x) => el("div", {class: "tarjeta fuente"},
+      el("div", {class: "fuente-nombre"}, x.nombre, el("span", {}, x.entidad)),
+      el("p", {}, x.que),
+      el("p", {class: "fuente-responde"}, x.responde))))));
+  main.append(el("p", {class: "nota", style: "margin-top:16px"},
+    "Valores nacionales: suma para conteos y promedio ponderado para porcentajes y puntajes. Detalle en ", el("a", {href: "#/metodologia"}, "Metodología"), "."));
+}
+
 function vistaPanorama(main) {
   main.append(el("section", {class: "portada"},
     el("span", {class: "chip"}, "Tablero 1 · Educación superior y conectividad"),
@@ -171,6 +258,7 @@ function vistaExplorador(main, dim) {
 
   main.append(el("div", {class: "ficha"},
     el("h1", {}, info.nombre),
+    GUIA[ind] ? el("p", {class: "para-que"}, el("strong", {}, "Para qué sirve: "), GUIA[ind].para) : null,
     el("p", {class: "bajada", style: "margin-bottom:8px"}, info.definicion),
     el("div", {class: "meta"}, el("span", {class: "chip"}, info.dimension), el("span", {}, `Unidad: ${info.unidad}`), el("span", {}, `Fuente: ${info.fuente}`))));
 
@@ -313,7 +401,7 @@ function vistaMetodologia(main) {
 
 // ---------- enrutador ----------
 function render() {
-  const ruta = location.hash.replace(/^#\/?/, "") || "panorama";
+  const ruta = location.hash.replace(/^#\/?/, "") || "esencial";
   const vista = VISTAS.find((v) => v.ruta === ruta) ?? VISTAS[0];
   document.querySelectorAll(".nav a").forEach((a) => a.setAttribute("aria-current", a.dataset.ruta === vista.ruta ? "page" : "false"));
   const main = document.querySelector("main");
@@ -328,6 +416,7 @@ function render() {
     main.append(el("h1", {}, "Cruces de información"));
     vistaCruces(main);
   } else if (vista.ruta === "metodologia") vistaMetodologia(main);
+  else if (vista.ruta === "esencial") vistaEsencial(main);
   else vistaPanorama(main);
   document.title = `${vista.nombre} · Observatorio HYBRIDA`;
   scrollTo(0, ruta === render.ultima ? y : 0);
