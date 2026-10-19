@@ -551,9 +551,10 @@ def mapear(s, fn):
     return s.map({x: fn(x) for x in u})
 
 def cat_etnia(v):
+    # En el formulario del Icfes quien no pertenece a un grupo étnico suele dejar la respuesta vacía:
+    # vacío cuenta como "sin pertenencia étnica" (mismo criterio que los reportes del Icfes).
     v = norm_val(v)
-    if not v: return 'Sin información'
-    if 'NINGUN' in v or v in ('NO', 'N'): return 'Ninguno'
+    if not v or 'NINGUN' in v or v in ('NO', 'N'): return 'Sin pertenencia étnica'
     if 'INDIGEN' in v: return 'Indígena'
     if any(k in v for k in ('AFRO', 'NEGR', 'PALENQ', 'RAIZAL')): return 'Afro, negro, raizal o palenquero'
     if 'ROM' in v or 'GITAN' in v: return 'Rrom'
@@ -563,8 +564,7 @@ def cat_etnia(v):
     return 'Indígena'
 
 def bin_etnia(v):
-    c = cat_etnia(v)
-    return np.nan if c == 'Sin información' else (0.0 if c == 'Ninguno' else 1.0)
+    return 0.0 if cat_etnia(v) == 'Sin pertenencia étnica' else 1.0
 
 def bin_discapacidad(v):
     v = norm_val(v)
@@ -797,7 +797,7 @@ intentar(brecha, 's11_brecha_sexo', 's11_punt_global_prom', 'sexo', 'Mujer', 'Ho
 intentar(brecha, 'tyt_brecha_sexo', 'tyt_punt_global_prom', 'sexo', 'Mujer', 'Hombre')
 intentar(brecha, 's11_brecha_discapacidad', 's11_punt_global_prom', 'discapacidad', 'Con discapacidad', 'Sin discapacidad')
 for _g, _slug in [('Indígena', 'indigena'), ('Afro, negro, raizal o palenquero', 'afro')]:
-    intentar(brecha, f's11_brecha_{_slug}', 's11_punt_global_prom', 'etnia', _g, 'Ninguno')
+    intentar(brecha, f's11_brecha_{_slug}', 's11_punt_global_prom', 'etnia', _g, 'Sin pertenencia étnica')
 
 if derivados:
     panel = pd.concat([panel] + derivados, ignore_index=True)
@@ -840,8 +840,8 @@ CATALOGO = [
     # Representación · enfoque diferencial (autorreportado en el formulario del Icfes)
     ('s11_pct_mujeres', 'Mujeres entre los evaluados de Saber 11', 'Representación', '%', 'Icfes – DataIcfes', 'Evaluadas mujeres / (mujeres + hombres) × 100.'),
     ('tyt_pct_mujeres', 'Mujeres entre los evaluados de Saber TyT', 'Representación', '%', 'Icfes – DataIcfes', 'Evaluadas mujeres / (mujeres + hombres) × 100.'),
-    ('s11_pct_etnia', 'Bachilleres que se reconocen de un grupo étnico', 'Representación', '%', 'Icfes – DataIcfes', 'Evaluados que se reconocen indígenas, afro, raizales, palenqueros, Rrom u otro grupo / respuestas válidas × 100.'),
-    ('tyt_pct_etnia', 'Evaluados TyT que se reconocen de un grupo étnico', 'Representación', '%', 'Icfes – DataIcfes', 'Evaluados que se reconocen de un grupo étnico / respuestas válidas × 100.'),
+    ('s11_pct_etnia', 'Bachilleres que se reconocen de un grupo étnico', 'Representación', '%', 'Icfes – DataIcfes', 'Evaluados que se reconocen indígenas, afro, raizales, palenqueros, Rrom u otro grupo / total de evaluados × 100. La respuesta vacía cuenta como sin pertenencia étnica.'),
+    ('tyt_pct_etnia', 'Evaluados TyT que se reconocen de un grupo étnico', 'Representación', '%', 'Icfes – DataIcfes', 'Evaluados que se reconocen de un grupo étnico / total de evaluados × 100. La respuesta vacía cuenta como sin pertenencia étnica.'),
     ('s11_pct_discapacidad', 'Bachilleres con discapacidad', 'Representación', '%', 'Icfes – DataIcfes', 'Evaluados que reportan alguna discapacidad / respuestas válidas × 100.'),
     ('tyt_pct_discapacidad', 'Evaluados TyT con discapacidad', 'Representación', '%', 'Icfes – DataIcfes', 'Evaluados que reportan alguna discapacidad / respuestas válidas × 100.'),
     ('s11_pct_extranjero', 'Bachilleres de nacionalidad extranjera', 'Representación', '%', 'Icfes – DataIcfes', 'Evaluados con nacionalidad distinta a la colombiana / respuestas válidas × 100. Aproxima la población migrante en el sistema escolar.'),
