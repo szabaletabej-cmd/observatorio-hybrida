@@ -11,14 +11,22 @@ export const oscuro = () =>
 export function paleta() {
   const d = oscuro();
   return {
-    serie: d ? ["#3987e5", "#d95926", "#c050c0", "#199e70", "#c98500", "#008300"]
-             : ["#2659b8", "#e06a1f", "#9a2a9a", "#0f9e9e", "#c99400", "#2e8b3e"],
+    // Orden de marca (azul, morado, ámbar…), validado para daltonismo con validate_palette.js
+    serie: d ? ["#3987E5", "#C050C0", "#C98500", "#199E70", "#7272E0", "#008300"]
+             : ["#1E80C8", "#9A2A9A", "#C27A00", "#0F9E9E", "#5B5FD6", "#2E8B3E"],
     secuencial: d ? ["#1a2c4f", "#24467f", "#3563ad", "#6e93d4", "#b3c7ee"]
-                  : ["#c9d7ee", "#93acd9", "#5a7fc0", "#2d58a3", "#10357A"],
+                  : ["#d9e2f0", "#a7bad8", "#6f8db9", "#3a5f96", "#10366A"],
+    // Vista general (maquetas del equipo de diseño): dos series validadas para daltonismo, donas y barras
+    serie2: d ? ["#3987E5", "#C050C0"] : ["#1E80C8", "#9A2A9A"],
+    dona: d ? "#9C9BFF" : "#8382FA",
+    donaFondo: d ? "#33343a" : "#EEEDF6",
+    barra: d ? "#5b9be0" : "#003E6B",
+    barra2: d ? "#8fb8e6" : "#6CA2C9",
+    titulo: d ? "#a9bfec" : "#10366A",
     // brechas: negativo en naranja, positivo en azul de marca, cero en gris
     divergente: d ? ["#e07a3f", "#7a4a2c", "#3a3c42", "#3a5f9c", "#8fb0ea"]
                   : ["#b8501c", "#efae86", "#eceef2", "#93acd9", "#10357A"],
-    suave: d ? "#2f5594" : "#a9bde3",
+    suave: d ? "#2f5594" : "#9DB6D6",
     seleccion: d ? "#d58ad5" : "#800080",
     gris: d ? "#3a3d44" : "#d7dbe4",
     sinDato: d ? "#2a2c30" : "#eef0f4",
@@ -33,7 +41,7 @@ export function paleta() {
 const base = () => {
   const p = paleta();
   return {
-    style: {fontFamily: "'Source Sans 3', system-ui, -apple-system, 'Segoe UI', sans-serif", fontSize: "12.5px", color: p.tinta2, background: "transparent", overflow: "visible"},
+    style: {fontFamily: "Roboto, system-ui, -apple-system, 'Segoe UI', sans-serif", fontSize: "12.5px", color: p.tinta2, background: "transparent", overflow: "visible"},
   };
 };
 
@@ -71,7 +79,7 @@ function leyenda(color, info, ancho = 260) {
   cont.append(Plot.legend({
     color: {...color, legend: "ramp", label: null, tickFormat: fmt},
     width: ancho, height: 44, marginTop: 6, marginLeft: 8, marginRight: 14,
-    style: {background: "transparent", color: p.tinta2, fontSize: "11px", fontFamily: "'Source Sans 3', system-ui"},
+    style: {background: "transparent", color: p.tinta2, fontSize: "11px", fontFamily: "Roboto, system-ui"},
   }));
   const u = document.createElement("p");
   u.className = "nota";

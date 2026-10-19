@@ -1,3 +1,6 @@
+import "@fontsource/roboto/latin-400.css";
+import "@fontsource/roboto/latin-500.css";
+import "@fontsource/roboto/latin-700.css";
 import "@fontsource/poppins/latin-500.css";
 import "@fontsource/poppins/latin-600.css";
 import "@fontsource/source-sans-3/latin-400.css";
@@ -10,8 +13,10 @@ import {mapa, ranking, evolucion, desagregacion, dispersion, matrizCorrelacion, 
 import {GRUPOS, GUIA, FUENTES, RECOLECCION} from "./guia.js";
 import {botonImagen, crearBuscador, recorrido, recorridoPrimeraVez} from "./extras.js";
 import {visible} from "./publicacion.js";
+import {vistaGeneral} from "./vista_general.js";
 
 const VISTAS = [
+  {ruta: "general", nombre: "Vista general"},
   {ruta: "esencial", nombre: "Lo esencial"},
   {ruta: "panorama", nombre: "Panorama"},
   {ruta: "redistribucion", nombre: "Redistribución", dim: "Redistribución"},
@@ -485,6 +490,7 @@ function render() {
     vistaCruces(main);
   } else if (vista.ruta === "metodologia") vistaMetodologia(main);
   else if (vista.ruta === "esencial") vistaEsencial(main);
+  else if (vista.ruta === "general") vistaGeneral(main, {D, estado, render});
   else vistaPanorama(main);
   document.title = `${vista.nombre} · Observatorio HYBRIDA`;
   scrollTo(0, ruta === render.ultima ? y : 0);
