@@ -7,7 +7,7 @@ import "./estilos.css";
 import * as d3 from "d3";
 import {cargarDatos, formatear, signoPct, NOMBRES_DESAG, ORDEN_DIM} from "./datos.js";
 import {mapa, ranking, evolucion, desagregacion, dispersion, matrizCorrelacion, vacio, paleta} from "./graficos.js";
-import {GRUPOS, GUIA, FUENTES} from "./guia.js";
+import {GRUPOS, GUIA, FUENTES, RECOLECCION} from "./guia.js";
 
 const VISTAS = [
   {ruta: "esencial", nombre: "Lo esencial"},
@@ -139,53 +139,109 @@ function minigrafico(serie, ancho = 220, alto = 46) {
   return svg;
 }
 
-function tarjetaClave(ind) {
+function valorClave(ind, anio, dep) {
+  return dep ? D.valores(ind, anio).get(dep) ?? null : D.nacional(ind, anio);
+}
+
+function tarjetaClave(ind, dep) {
   const info = D.info.get(ind);
   const g = GUIA[ind];
   const anios = D.anios(ind);
   const a = anios.at(-1), a0 = anios[0];
-  const v = D.nacional(ind, a), v0 = D.nacional(ind, a0);
-  const serie = anios.map((x) => ({anio: x, valor: D.nacional(ind, x)}));
-  const vals = [...D.valores(ind, a)].filter(([, x]) => x != null);
-  const orden = g.cercaCero ? vals.sort((p, q) => Math.abs(p[1]) - Math.abs(q[1])) : vals.sort((p, q) => q[1] - p[1]);
-  const [alto, bajo] = [orden[0], orden.at(-1)];
+  const v = valorClave(ind, a, dep), v0 = valorClave(ind, a0, dep);
+  const serie = anios.map((x) => ({anio: x, valor: valorClave(ind, x, dep)}));
   const f = (x) => formatear(x, info.unidad, {corto: true});
-  const ir = () => irA(info, ind);
-  return el("article", {class: "tarjeta clave", tabindex: 0, role: "link", onclick: ir, onkeydown: (e) => e.key === "Enter" && ir()},
+  const abrir = () => abrirFicha(ind);
+  return el("article", {class: "tarjeta clave", tabindex: 0, role: "button", "aria-haspopup": "dialog",
+    onclick: abrir, onkeydown: (e) => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), abrir())},
     el("h3", {}, g.corto),
-    el("div", {class: "clave-valor"}, el("span", {class: "dato-valor"}, f(v)), el("span", {class: "clave-anio"}, `Colombia, ${a}`)),
+    el("div", {class: "clave-valor"}, el("span", {class: "dato-valor"}, f(v)), el("span", {class: "clave-anio"}, `${dep ? D.deptos[dep] : "Colombia"}, ${a}`)),
     minigrafico(serie),
-    el("div", {class: "clave-cambio"}, a0 !== a ? `Desde ${a0}: ${cambioTexto(v, v0, info.unidad)}` : ""),
-    alto && bajo ? el("dl", {class: "clave-extremos"},
-      el("dt", {}, g.extremo[0]), el("dd", {}, `${D.deptos[alto[0]]} · ${f(alto[1])}`),
-      el("dt", {}, g.extremo[1]), el("dd", {}, `${D.deptos[bajo[0]]} · ${f(bajo[1])}`)) : null,
-    el("p", {class: "clave-para"}, g.para),
-    el("span", {class: "clave-ir"}, "Ver mapa y detalle →"));
+    el("div", {class: "clave-pie"},
+      el("span", {}, a0 !== a && v != null && v0 != null ? `Desde ${a0}: ${cambioTexto(v, v0, info.unidad)}` : dep ? `Colombia: ${f(D.nacional(ind, a))}` : ""),
+      el("span", {class: "clave-ir"}, "Ficha")));
+}
+
+function abrirFicha(ind) {
+  const info = D.info.get(ind);
+  const g = GUIA[ind];
+  const anios = D.anios(ind);
+  const a = anios.at(-1);
+  const dep = estado.dep;
+  const vals = [...D.valores(ind, a)].filter(([, x]) => x != null);
+  const orden = g.cercaCero ? [...vals].sort((p, q) => Math.abs(p[1]) - Math.abs(q[1])) : [...vals].sort((p, q) => q[1] - p[1]);
+  const f = (x) => formatear(x, info.unidad);
+  const des = [...(D.desagregaciones.get(ind)?.keys() ?? [])].map((d) => NOMBRES_DESAG[d] ?? d);
+  const recol = RECOLECCION.find(([re]) => re.test(ind))?.[1] ?? info.fuente;
+  const fila = (t, ...v) => [el("dt", {}, t), el("dd", {}, ...v)];
+
+  const dlg = el("dialog", {class: "ficha-dlg", "aria-labelledby": "ficha-titulo"});
+  const cerrar = () => dlg.close();
+  dlg.addEventListener("close", () => dlg.remove());
+  dlg.addEventListener("click", (e) => e.target === dlg && cerrar());
+  const cMapa = el("div", {class: "ficha-mapa"});
+  dlg.append(
+    el("div", {class: "ficha-cab"},
+      el("div", {},
+        el("span", {class: "chip"}, `Ficha del indicador · ${info.dimension}`),
+        el("h2", {id: "ficha-titulo"}, info.nombre),
+        el("p", {}, g.para)),
+      el("button", {class: "ficha-cerrar", "aria-label": "Cerrar", onclick: cerrar}, "×")),
+    el("div", {class: "ficha-cuerpo"},
+      el("div", {class: "ficha-resumen"},
+        el("div", {class: "ficha-cifras"},
+          el("div", {}, el("div", {class: "dato-etq"}, `Colombia, ${a}`), el("div", {class: "dato-valor"}, f(D.nacional(ind, a)))),
+          dep ? el("div", {}, el("div", {class: "dato-etq"}, `${D.deptos[dep]}, ${a}`), el("div", {class: "dato-valor sel"}, f(D.valores(ind, a).get(dep)))) : null),
+        cMapa,
+        orden.length ? el("dl", {class: "clave-extremos"},
+          el("dt", {}, g.extremo[0]), el("dd", {}, `${D.deptos[orden[0][0]]} · ${f(orden[0][1])}`),
+          el("dt", {}, g.extremo[1]), el("dd", {}, `${D.deptos[orden.at(-1)[0]]} · ${f(orden.at(-1)[1])}`)) : null),
+      el("dl", {class: "pirs"},
+        ...fila("Definición", g.definicion ?? info.definicion),
+        ...fila("Cálculo", g.calculo ?? info.definicion),
+        ...fila("Unidad", info.unidad),
+        ...fila("Nivel geográfico", "Departamento (código DANE). El dato nacional es la suma o el promedio ponderado de los departamentos."),
+        ...fila("Desagregaciones", des.length ? des.join(", ") : "Ninguna"),
+        ...fila("Fuente", info.fuente),
+        ...fila("Recolección", recol),
+        ...fila("Frecuencia", g.frecuencia ?? "Anual"),
+        ...fila("Cobertura", `${anios[0]}–${a} · ${vals.length} departamentos en ${a}`),
+        ...fila("Limitaciones", g.limites ?? "—"),
+        ...fila("Dimensión de la tríada", info.dimension))),
+    el("div", {class: "ficha-pie"},
+      el("button", {class: "boton", onclick: cerrar}, "Cerrar"),
+      el("button", {class: "boton primario", onclick: () => { cerrar(); irA(info, ind); }}, "Ver mapa completo y desagregaciones")));
+  document.body.append(dlg);
+  dlg.showModal();
+  cMapa.append(mapa({geo: D.geo, valores: D.valores(ind, a), info, deptos: D.deptos, width: Math.max(220, cMapa.clientWidth || 260), compacto: true, seleccion: dep}));
 }
 
 function vistaEsencial(main) {
   main.append(el("section", {class: "portada"},
     el("span", {class: "chip"}, "Observatorio HYBRIDA de datos educativos"),
     el("h1", {}, "Lo esencial en 12 indicadores"),
-    el("p", {class: "bajada"}, "Una lectura rápida de las brechas educativas en Colombia a partir de datos oficiales. Cada tarjeta muestra el dato nacional más reciente, cómo ha cambiado y qué departamentos están en los extremos. Haz clic en una para ver el mapa."),
+    el("p", {class: "bajada"}, "Datos oficiales sobre las brechas educativas en Colombia. Elige un departamento para compararlo con el país y abre cualquier tarjeta para ver su ficha técnica."),
   ));
-  for (const grupo of GRUPOS) {
+  const grupoSel = estado.grupo ?? "";
+  const chips = el("div", {class: "chips", role: "group", "aria-label": "Tema"},
+    [{p: "", t: "Todos"}, ...GRUPOS.map((g) => ({p: g.pregunta, t: g.corto}))].map(({p, t}) =>
+      el("button", {class: "chip-filtro", "aria-pressed": String(p === grupoSel), onclick: () => ((estado.grupo = p), render())}, t)));
+  main.append(el("div", {class: "filtros filtros-clave"},
+    selector({etiqueta: "Departamento", opciones: [{valor: "", texto: "Colombia (nacional)"}, ...opcionesDeptos().slice(1)], valor: estado.dep, alCambiar: (v) => ((estado.dep = v), render())}),
+    el("div", {class: "filtro"}, el("label", {}, "Tema"), chips)));
+  for (const grupo of GRUPOS.filter((g) => !grupoSel || g.pregunta === grupoSel)) {
     const inds = grupo.indicadores.filter((i) => D.info.has(i) && GUIA[i]);
     if (!inds.length) continue;
     main.append(el("section", {class: "grupo-clave"},
       el("h2", {}, grupo.pregunta),
-      el("p", {class: "bajada"}, grupo.texto),
-      el("div", {class: "rejilla r-clave"}, inds.map(tarjetaClave))));
+      el("div", {class: "rejilla r-clave"}, inds.map((i) => tarjetaClave(i, estado.dep)))));
   }
-  main.append(el("section", {class: "grupo-clave"},
-    el("h2", {}, "¿De dónde salen los datos?"),
-    el("p", {class: "bajada"}, "Cuatro bases oficiales y abiertas. Cada una responde una pregunta distinta."),
-    el("div", {class: "rejilla r4"}, FUENTES.map((x) => el("div", {class: "tarjeta fuente"},
+  main.append(el("details", {class: "grupo-clave fuentes-plegable"},
+    el("summary", {}, "¿De dónde salen los datos?"),
+    el("div", {class: "rejilla r4", style: "margin-top:12px"}, FUENTES.map((x) => el("div", {class: "tarjeta fuente"},
       el("div", {class: "fuente-nombre"}, x.nombre, el("span", {}, x.entidad)),
       el("p", {}, x.que),
       el("p", {class: "fuente-responde"}, x.responde))))));
-  main.append(el("p", {class: "nota", style: "margin-top:16px"},
-    "Valores nacionales: suma para conteos y promedio ponderado para porcentajes y puntajes. Detalle en ", el("a", {href: "#/metodologia"}, "Metodología"), "."));
 }
 
 function vistaPanorama(main) {
