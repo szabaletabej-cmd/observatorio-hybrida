@@ -12,8 +12,9 @@ export function paleta() {
   const d = oscuro();
   return {
     // Orden de marca (azul, morado, ámbar…), validado para daltonismo con validate_palette.js
-    serie: d ? ["#3987E5", "#C050C0", "#C98500", "#199E70", "#7272E0", "#008300"]
-             : ["#1E80C8", "#9A2A9A", "#C27A00", "#0F9E9E", "#5B5FD6", "#2E8B3E"],
+    // Solo tonos de la marca (azules, morados, lila de las maquetas), en orden fijo; validados con validate_palette.js
+    serie: d ? ["#3987E5", "#C050C0", "#7E7EE6", "#2A9FB0", "#9A6FD0"]
+             : ["#1E80C8", "#9A2A9A", "#8382FA", "#2D5596", "#B05FB0"],
     secuencial: d ? ["#1a2c4f", "#24467f", "#3563ad", "#6e93d4", "#b3c7ee"]
                   : ["#d9e2f0", "#a7bad8", "#6f8db9", "#3a5f96", "#10366A"],
     // Vista general (maquetas del equipo de diseño): dos series validadas para daltonismo, donas y barras
@@ -23,9 +24,9 @@ export function paleta() {
     barra: d ? "#5b9be0" : "#003E6B",
     barra2: d ? "#8fb8e6" : "#6CA2C9",
     titulo: d ? "#a9bfec" : "#10366A",
-    // brechas: negativo en naranja, positivo en azul de marca, cero en gris
-    divergente: d ? ["#e07a3f", "#7a4a2c", "#3a3c42", "#3a5f9c", "#8fb0ea"]
-                  : ["#b8501c", "#efae86", "#eceef2", "#93acd9", "#10357A"],
+    // brechas: desventaja en morado de marca, cero en gris, ventaja en azul académico
+    divergente: d ? ["#C050C0", "#6a3a6a", "#3a3c42", "#3a5f9c", "#8fb0ea"]
+                  : ["#7A007A", "#C79AC7", "#ECEEF2", "#93ACD9", "#10366A"],
     suave: d ? "#2f5594" : "#9DB6D6",
     seleccion: d ? "#d58ad5" : "#800080",
     gris: d ? "#3a3d44" : "#d7dbe4",
