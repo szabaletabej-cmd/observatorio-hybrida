@@ -314,7 +314,12 @@ function vistaExplorador(main, dim) {
   estado.contextoImg = `${info.nombre} ${anio}`;
   // No se desagrega un porcentaje por la misma variable que lo define (p. ej. % étnico por etnia = 100 %)
   const TAUTOLOGIA = {etnia: /pct_etnia/, discapacidad: /pct_discapacidad/, grupo_edad: /extraedad|mayor_25/, sexo: /pct_mujeres/};
-  const desOps = [...(D.desagregaciones.get(ind)?.keys() ?? [])].filter((d) => !TAUTOLOGIA[d]?.test(ind));
+  // En los porcentajes de población (quién está) no se cruzan entre sí las variables de enfoque diferencial:
+  // se dejan sexo, zona, sector, estrato y modalidad. Los cruces por etnia, discapacidad y edad quedan para los puntajes.
+  const POBLACION = /_pct_(mujeres|etnia|discapacidad|extranjero|campesino|extraedad|mayor_25|trabaja)$/;
+  const desOps = [...(D.desagregaciones.get(ind)?.keys() ?? [])]
+    .filter((d) => !TAUTOLOGIA[d]?.test(ind))
+    .filter((d) => !(POBLACION.test(ind) && ["etnia", "discapacidad", "grupo_edad"].includes(d)));
   const des = desOps.includes(estado.des[ind]) ? estado.des[ind] : desOps[0];
   const dep = estado.dep;
   const rerender = () => render();
