@@ -127,7 +127,7 @@ h2 { font-size: 16px; line-height: 1.35; margin: 0 0 2px; font-weight: 600; }
   display: flex; flex-wrap: wrap; gap: 12px 20px; align-items: end;
   padding: 14px 16px; background: var(--superficie); border: 1px solid var(--borde);
   border-radius: var(--radio); margin-bottom: 18px;
-  position: sticky; top: 92px; z-index: 5;
+  position: sticky; top: calc(var(--alto-cab, 118px) + 8px); z-index: 5;
 }
 .filtro { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
 .filtro label { font-family: var(--fuente-titulo); font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--tinta-2); font-weight: 600; }
@@ -296,14 +296,9 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
 @media (max-width: 760px) { .ficha-mapa { max-width: 260px; margin: 0 auto; } }
 
 /* Herramientas: buscador, ayuda, descarga PNG, recorrido */
-.cabecera-int { gap: 6px 24px; }
-.nav a { padding: 10px 10px 13px; }
-.cabecera-int { position: relative; padding-right: 120px; }
-.herramientas { display: flex; gap: 6px; align-items: center; position: absolute; top: 18px; right: 24px; }
 .herr { font: inherit; font-size: 13px; display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 10px; border-radius: 8px; border: 1px solid var(--eje); background: var(--superficie); color: var(--tinta-2); cursor: pointer; }
 .herr:hover { border-color: var(--acento); color: var(--acento); }
 .herr-ayuda { width: 34px; justify-content: center; padding: 0; }
-@media (max-width: 560px) { .herr-buscar span { display: none; } .herr-buscar { width: 34px; justify-content: center; padding: 0; } .herramientas { top: 20px; right: 16px; } .cabecera-int { padding-right: 16px; } }
 .tarjeta-cab > .boton-img { flex: none; }
 .boton-img { display: inline-flex; align-items: center; gap: 4px; font-size: 11.5px; padding: 3px 8px; color: var(--tinta-3); border-color: var(--reticula); }
 .boton-img:hover { color: var(--acento); }
@@ -337,6 +332,17 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
 .ficha-contenido { display: flex; flex-direction: column; min-height: 0; flex: 1; background: var(--superficie); }
 .capturando .ficha-cuerpo { overflow: visible; }
 .pirs dd { overflow-wrap: anywhere; }
-@media (max-width: 560px) { .cabecera-int { padding-right: 96px; } .marca-sub { font-size: 9px; letter-spacing: .1em; } }
 .firma-imagen { margin: 12px 0 0; padding: 8px 24px 12px; font-size: 12px; color: var(--tinta-3); border-top: 1px solid var(--reticula); }
 .tarjeta > .firma-imagen { padding: 8px 0 0; }
+
+/* Encabezado en dos niveles: marca + herramientas arriba, secciones abajo */
+.cabecera-int { display: grid; grid-template-columns: 1fr auto; grid-template-areas: "marca herr" "nav nav"; align-items: center; gap: 0 24px; padding: 10px 24px 0; }
+.marca { grid-area: marca; padding-bottom: 8px; }
+.herramientas { grid-area: herr; display: flex; gap: 8px; align-items: center; padding-bottom: 8px; }
+.nav { grid-area: nav; border-top: 1px solid var(--reticula); margin: 0 -8px; }
+.nav a { padding: 11px 14px 12px; font-size: 14px; }
+.herr-buscar { min-width: 300px; justify-content: flex-start; color: var(--tinta-3); background: var(--plano); }
+.herr-buscar span { flex: 1; text-align: left; }
+.herr-buscar kbd { font-family: var(--fuente); font-size: 11px; border: 1px solid var(--eje); border-radius: 4px; padding: 0 5px; color: var(--tinta-3); }
+@media (max-width: 760px) { .herr-buscar { min-width: 0; } .herr-buscar span, .herr-buscar kbd { display: none; } .herr-buscar { width: 34px; justify-content: center; padding: 0; } }
+@media (max-width: 560px) { .cabecera-int { padding: 10px 16px 0; } .marca-sub { font-size: 9px; letter-spacing: .1em; } .isotipo { height: 40px; } }

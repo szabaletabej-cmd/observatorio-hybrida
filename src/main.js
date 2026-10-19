@@ -506,9 +506,12 @@ async function iniciar() {
     irADepto: (cod) => { estado.dep = cod; if (location.hash === "#/esencial") render(); else location.hash = "#/esencial"; }});
   nav.after(el("div", {class: "herramientas"},
     el("button", {class: "herr herr-buscar", type: "button", title: "Buscar (tecla /)", "aria-label": "Buscar indicadores y departamentos", onclick: abrirBuscador},
-      svgIcono('<circle cx="7" cy="7" r="4.5"/><path d="M10.5 10.5 14 14"/>'), el("span", {}, "Buscar")),
+      svgIcono('<circle cx="7" cy="7" r="4.5"/><path d="M10.5 10.5 14 14"/>'), el("span", {}, "Buscar indicador o departamento"), el("kbd", {}, "/")),
     el("button", {class: "herr herr-ayuda", type: "button", title: "Cómo usar el tablero", "aria-label": "Cómo usar el tablero", onclick: () => { if (!/esencial/.test(location.hash) && location.hash) { location.hash = "#/esencial"; setTimeout(recorrido, 400); } else recorrido(); }},
       svgIcono('<circle cx="8" cy="8" r="6.5"/><path d="M6.2 6.3a1.9 1.9 0 1 1 2.6 1.8c-.5.2-.8.6-.8 1.1v.4"/><circle cx="8" cy="11.6" r=".4" fill="currentColor"/>'))));
+  const altoCab = () => document.documentElement.style.setProperty("--alto-cab", document.querySelector(".cabecera").offsetHeight + "px");
+  altoCab();
+  addEventListener("resize", altoCab);
   addEventListener("hashchange", render);
   let t;
   let ancho = innerWidth;
