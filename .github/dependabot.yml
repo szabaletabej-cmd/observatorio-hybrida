@@ -1,0 +1,14 @@
+# Revisa una vez al mes si hay actualizaciones de seguridad de las librerías y de las acciones de GitHub.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: monthly
+    groups:
+      dependencias:
+        patterns: ["*"]
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly

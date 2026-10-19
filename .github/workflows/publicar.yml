@@ -1,0 +1,33 @@
+# Publica el tablero en Cloudflare Pages (observatorio-hybrida.pages.dev) con cada cambio en main.
+name: Publicar tablero
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: publicar
+  cancel-in-progress: true
+
+jobs:
+  publicar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - name: Publicar en Cloudflare Pages
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          # El ID de cuenta no es secreto (Cloudflare lo muestra en las URL del panel)
+          accountId: e125c384485bf0a904a37a6b3707aefc
+          command: pages deploy dist --project-name=observatorio-hybrida --branch=main --commit-dirty=true

@@ -1,5 +1,9 @@
 # Observatorio HYBRIDA · Tablero departamental
 
+[![Publicar tablero](https://github.com/szabaletabej-cmd/observatorio-hybrida/actions/workflows/publicar.yml/badge.svg)](https://github.com/szabaletabej-cmd/observatorio-hybrida/actions/workflows/publicar.yml)
+
+En línea: https://observatorio-hybrida.pages.dev
+
 Tablero web del Observatorio HYBRIDA de Datos Educativos. Cruza bases oficiales (SNIES, Icfes, MinTIC) por departamento y año, organizadas según la tríada **redistribución, reconocimiento y representación**.
 
 Secciones: Panorama · Redistribución · Reconocimiento · Representación · Cruces · Metodología.
@@ -20,18 +24,13 @@ Drive (bases oficiales)  →  notebook en Colab  →  tablero_datos.json  →  e
 1. Abre `notebooks/Observatorio_HYBRIDA_procesamiento.ipynb` en Colab y ejecútalo. El código vive en Drive (`06 Observatorio – Bases de datos/observatorio_hybrida.py`); en este repositorio hay una copia en `notebooks/`.
 2. Descarga `tablero_datos.json` de la carpeta `_procesado/` en Drive.
 3. En GitHub, entra a `public/data/`, elige **Add file → Upload files**, sube el archivo (reemplaza el anterior) y confirma.
-4. Cloudflare publica la nueva versión sola en uno o dos minutos.
+4. GitHub Actions publica la nueva versión en uno o dos minutos.
 
-## Publicar en Cloudflare Pages (una sola vez)
+## Publicación automática
 
-1. En Cloudflare: **Workers & Pages → Create → Pages → Connect to Git** y elige este repositorio.
-2. Configuración de build:
-   - Framework preset: `Vite` (o ninguno)
-   - Build command: `npm run build`
-   - Build output directory: `dist`
-3. **Save and Deploy**. Queda en una dirección `*.pages.dev`; después se puede asignar un dominio propio (por ejemplo `observatorio.hibrida.org`) en **Custom domains**.
+Cada cambio en la rama `main` se publica solo en Cloudflare Pages mediante GitHub Actions (`.github/workflows/publicar.yml`): instala, compila y sube `dist/` al proyecto `observatorio-hybrida`. El avance se ve en la pestaña **Actions** del repositorio. También se puede lanzar a mano desde **Actions → Publicar tablero → Run workflow**.
 
-Cada cambio que se suba al repositorio se publica automáticamente.
+Requisito (una sola vez): el secreto `CLOUDFLARE_API_TOKEN` en **Settings → Secrets and variables → Actions**, con un token de Cloudflare que tenga permiso *Account · Cloudflare Pages · Edit*.
 
 ## Sumar un indicador
 
