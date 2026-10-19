@@ -294,3 +294,49 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
 :root[data-theme="dark"] .boton.primario { color: #1A1A1A; }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .boton.primario { color: #1A1A1A; } }
 @media (max-width: 760px) { .ficha-mapa { max-width: 260px; margin: 0 auto; } }
+
+/* Herramientas: buscador, ayuda, descarga PNG, recorrido */
+.cabecera-int { gap: 6px 24px; }
+.nav a { padding: 10px 10px 13px; }
+.cabecera-int { position: relative; padding-right: 120px; }
+.herramientas { display: flex; gap: 6px; align-items: center; position: absolute; top: 18px; right: 24px; }
+.herr { font: inherit; font-size: 13px; display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 10px; border-radius: 8px; border: 1px solid var(--eje); background: var(--superficie); color: var(--tinta-2); cursor: pointer; }
+.herr:hover { border-color: var(--acento); color: var(--acento); }
+.herr-ayuda { width: 34px; justify-content: center; padding: 0; }
+@media (max-width: 560px) { .herr-buscar span { display: none; } .herr-buscar { width: 34px; justify-content: center; padding: 0; } .herramientas { top: 20px; right: 16px; } .cabecera-int { padding-right: 16px; } }
+.tarjeta-cab > .boton-img { flex: none; }
+.boton-img { display: inline-flex; align-items: center; gap: 4px; font-size: 11.5px; padding: 3px 8px; color: var(--tinta-3); border-color: var(--reticula); }
+.boton-img:hover { color: var(--acento); }
+.boton-img[disabled] { opacity: .5; cursor: progress; }
+.capturando { max-height: none !important; }
+.capturando .ficha-cuerpo { overflow: visible; }
+.ficha-pie { align-items: center; }
+.ficha-pie .boton-img { margin-right: auto; }
+
+.buscador { width: min(620px, calc(100vw - 32px)); margin-top: 12vh; padding: 0; border: 1px solid var(--borde); border-radius: 14px; background: var(--superficie); color: var(--tinta); box-shadow: 0 20px 60px rgba(0,0,0,.25); }
+.buscador::backdrop { background: rgba(16, 20, 35, .45); }
+.buscador input { width: 100%; font: inherit; font-size: 16px; padding: 16px 18px; border: none; border-bottom: 1px solid var(--borde); background: transparent; color: var(--tinta); outline: none; }
+.buscador ul { list-style: none; margin: 0; padding: 6px; max-height: 50vh; overflow: auto; }
+.buscador li { display: flex; gap: 12px; align-items: baseline; padding: 9px 12px; border-radius: 8px; cursor: pointer; }
+.buscador li[aria-selected="true"] { background: var(--acento-suave); }
+.buscador .b-tipo { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--tinta-3); width: 96px; flex: none; }
+.buscador .b-titulo { color: var(--tinta); }
+.buscador .b-vacio { color: var(--tinta-3); cursor: default; }
+.buscador-pie { margin: 0; padding: 8px 18px 12px; font-size: 12px; color: var(--tinta-3); border-top: 1px solid var(--reticula); }
+
+.driver-popover.hybrida-tour { background: var(--superficie); color: var(--tinta); border-radius: 12px; font-family: var(--fuente); max-width: 340px; }
+.driver-popover.hybrida-tour .driver-popover-title { font-family: var(--fuente-titulo); color: var(--titulo); font-size: 16px; }
+.driver-popover.hybrida-tour .driver-popover-description { color: var(--tinta-2); font-size: 14px; }
+.driver-popover.hybrida-tour .driver-popover-progress-text { color: var(--tinta-3); }
+.driver-popover.hybrida-tour .driver-popover-footer button { font-family: var(--fuente); text-shadow: none; border-radius: 6px; border: 1px solid var(--eje); background: var(--superficie); color: var(--tinta-2); padding: 4px 10px; }
+.driver-popover.hybrida-tour .driver-popover-footer .driver-popover-next-btn { background: var(--acento); border-color: var(--acento); color: #fff; }
+.driver-popover.hybrida-tour .driver-popover-arrow-side-bottom { border-bottom-color: var(--superficie); }
+.driver-popover.hybrida-tour .driver-popover-arrow-side-top { border-top-color: var(--superficie); }
+.driver-popover.hybrida-tour .driver-popover-arrow-side-left { border-left-color: var(--superficie); }
+.driver-popover.hybrida-tour .driver-popover-arrow-side-right { border-right-color: var(--superficie); }
+.ficha-contenido { display: flex; flex-direction: column; min-height: 0; flex: 1; background: var(--superficie); }
+.capturando .ficha-cuerpo { overflow: visible; }
+.pirs dd { overflow-wrap: anywhere; }
+@media (max-width: 560px) { .cabecera-int { padding-right: 96px; } .marca-sub { font-size: 9px; letter-spacing: .1em; } }
+.firma-imagen { margin: 12px 0 0; padding: 8px 24px 12px; font-size: 12px; color: var(--tinta-3); border-top: 1px solid var(--reticula); }
+.tarjeta > .firma-imagen { padding: 8px 0 0; }

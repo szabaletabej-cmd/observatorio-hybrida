@@ -8,6 +8,7 @@ import * as d3 from "d3";
 import {cargarDatos, formatear, signoPct, NOMBRES_DESAG, ORDEN_DIM} from "./datos.js";
 import {mapa, ranking, evolucion, desagregacion, dispersion, matrizCorrelacion, vacio, paleta} from "./graficos.js";
 import {GRUPOS, GUIA, FUENTES, RECOLECCION} from "./guia.js";
+import {botonImagen, crearBuscador, recorrido, recorridoPrimeraVez} from "./extras.js";
 
 const VISTAS = [
   {ruta: "esencial", nombre: "Lo esencial"},
@@ -79,9 +80,10 @@ function opcionesIndicadores(dim) {
 const anchoDe = (n) => Math.max(260, n.clientWidth - 36);
 
 function tarjeta(titulo, sub, ...contenido) {
-  return el("section", {class: "tarjeta"},
-    el("div", {class: "tarjeta-cab"}, el("div", {}, el("h2", {}, titulo), sub ? el("p", {}, sub) : null)),
-    ...contenido);
+  const t = el("section", {class: "tarjeta"});
+  t.append(el("div", {class: "tarjeta-cab"}, el("div", {}, el("h2", {}, titulo), sub ? el("p", {}, sub) : null),
+    botonImagen(t, [titulo, estado.contextoImg].filter(Boolean).join(" ")) ), ...contenido);
+  return t;
 }
 
 function tablaDatos(cols, filas, nombreArchivo) {
@@ -180,13 +182,15 @@ function abrirFicha(ind) {
   dlg.addEventListener("close", () => dlg.remove());
   dlg.addEventListener("click", (e) => e.target === dlg && cerrar());
   const cMapa = el("div", {class: "ficha-mapa"});
-  dlg.append(
+  const contenido = el("div", {class: "ficha-contenido"});
+  dlg.append(contenido);
+  contenido.append(
     el("div", {class: "ficha-cab"},
       el("div", {},
         el("span", {class: "chip"}, `Ficha del indicador · ${info.dimension}`),
         el("h2", {id: "ficha-titulo"}, info.nombre),
         el("p", {}, g.para)),
-      el("button", {class: "ficha-cerrar", "aria-label": "Cerrar", onclick: cerrar}, "×")),
+      el("button", {class: "ficha-cerrar no-imagen", "aria-label": "Cerrar", onclick: cerrar}, "×")),
     el("div", {class: "ficha-cuerpo"},
       el("div", {class: "ficha-resumen"},
         el("div", {class: "ficha-cifras"},
@@ -207,8 +211,10 @@ function abrirFicha(ind) {
         ...fila("Frecuencia", g.frecuencia ?? "Anual"),
         ...fila("Cobertura", `${anios[0]}–${a} · ${vals.length} departamentos en ${a}`),
         ...fila("Limitaciones", g.limites ?? "—"),
-        ...fila("Dimensión de la tríada", info.dimension))),
+        ...fila("Dimensión de la tríada", info.dimension))));
+  dlg.append(
     el("div", {class: "ficha-pie"},
+      botonImagen(contenido, `ficha ${info.nombre}`),
       el("button", {class: "boton", onclick: cerrar}, "Cerrar"),
       el("button", {class: "boton primario", onclick: () => { cerrar(); irA(info, ind); }}, "Ver mapa completo y desagregaciones")));
   document.body.append(dlg);
@@ -299,6 +305,7 @@ function vistaExplorador(main, dim) {
   const info = D.info.get(ind);
   const anios = D.anios(ind);
   const anio = anios.includes(estado.anio) ? estado.anio : anios.at(-1);
+  estado.contextoImg = `${info.nombre} ${anio}`;
   const desOps = [...(D.desagregaciones.get(ind)?.keys() ?? [])];
   const des = desOps.includes(estado.des[ind]) ? estado.des[ind] : desOps[0];
   const dep = estado.dep;
@@ -384,7 +391,9 @@ function vistaCruces(main) {
   const {nodo, r, n} = dispersion({X: D.valores(x, anio), Y: D.valores(y, anio), infoX, infoY, deptos: D.deptos, width: anchoDe(t), seleccion: estado.dep,
     alElegir: (cod) => ((estado.dep = estado.dep === cod ? "" : cod), rerender())});
   const lectura = r == null ? "" : `r = ${r.toFixed(2).replace(".", ",")} · ${n} departamentos · relación ${fuerza(r)}`;
-  t.append(el("div", {class: "tarjeta-cab"}, el("div", {}, el("h2", {}, `${infoY.nombre} · ${infoX.nombre}`), el("p", {}, `${anio}${lectura ? " · " + lectura : ""}`))), cont);
+  estado.contextoImg = String(anio);
+  t.append(el("div", {class: "tarjeta-cab"}, el("div", {}, el("h2", {}, `${infoY.nombre} · ${infoX.nombre}`), el("p", {}, `${anio}${lectura ? " · " + lectura : ""}`)),
+    botonImagen(t, `cruce ${infoY.nombre} ${infoX.nombre} ${anio}`)), cont);
   cont.append(nodo);
   t.append(el("p", {class: "nota"}, "Una correlación entre departamentos no implica causalidad ni describe a las personas dentro de cada departamento (falacia ecológica)."));
 
@@ -463,6 +472,7 @@ function render() {
   const main = document.querySelector("main");
   const y = scrollY;
   main.replaceChildren();
+  estado.contextoImg = "";
   if (D.demo) main.append(el("div", {class: "aviso", role: "note"}, "Datos de demostración generados para probar el tablero. No corresponden a cifras reales."));
   if (vista.dim) {
     main.append(el("span", {class: "chip"}, "Tríada"));
@@ -491,6 +501,14 @@ async function iniciar() {
     console.error(e);
     return;
   }
+  const abrirBuscador = crearBuscador({D, GUIA,
+    irAIndicador: (ind) => irA(D.info.get(ind), ind),
+    irADepto: (cod) => { estado.dep = cod; if (location.hash === "#/esencial") render(); else location.hash = "#/esencial"; }});
+  nav.after(el("div", {class: "herramientas"},
+    el("button", {class: "herr herr-buscar", type: "button", title: "Buscar (tecla /)", "aria-label": "Buscar indicadores y departamentos", onclick: abrirBuscador},
+      svgIcono('<circle cx="7" cy="7" r="4.5"/><path d="M10.5 10.5 14 14"/>'), el("span", {}, "Buscar")),
+    el("button", {class: "herr herr-ayuda", type: "button", title: "Cómo usar el tablero", "aria-label": "Cómo usar el tablero", onclick: () => { if (!/esencial/.test(location.hash) && location.hash) { location.hash = "#/esencial"; setTimeout(recorrido, 400); } else recorrido(); }},
+      svgIcono('<circle cx="8" cy="8" r="6.5"/><path d="M6.2 6.3a1.9 1.9 0 1 1 2.6 1.8c-.5.2-.8.6-.8 1.1v.4"/><circle cx="8" cy="11.6" r=".4" fill="currentColor"/>'))));
   addEventListener("hashchange", render);
   let t;
   let ancho = innerWidth;
@@ -502,6 +520,15 @@ async function iniciar() {
   });
   matchMedia("(prefers-color-scheme: dark)").addEventListener("change", render);
   render();
+  if (!location.hash || /esencial/.test(location.hash)) recorridoPrimeraVez();
+}
+
+function svgIcono(trazos) {
+  const s = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  s.setAttribute("viewBox", "0 0 16 16"); s.setAttribute("width", "16"); s.setAttribute("height", "16"); s.setAttribute("aria-hidden", "true");
+  s.setAttribute("fill", "none"); s.setAttribute("stroke", "currentColor"); s.setAttribute("stroke-width", "1.6"); s.setAttribute("stroke-linecap", "round");
+  s.innerHTML = trazos;
+  return s;
 }
 
 iniciar();

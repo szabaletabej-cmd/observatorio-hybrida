@@ -13,7 +13,10 @@
     "@fontsource/poppins": "^5.3.0",
     "@fontsource/source-sans-3": "^5.3.1",
     "@observablehq/plot": "^0.6.17",
-    "d3": "^7.9.0"
+    "d3": "^7.9.0",
+    "driver.js": "^1.10.2",
+    "fuse.js": "^7.5.0",
+    "html-to-image": "^1.11.13"
   },
   "devDependencies": {
     "vite": "^8.0.0"
