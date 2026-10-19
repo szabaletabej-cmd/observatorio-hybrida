@@ -637,10 +637,19 @@ def cargar_icfes(fuente, prefijo, cand_depto_cod, cand_depto_nom, cand_dims, can
                 medidas += [p, p + '__c']
             for b, opciones in sel['bins'].items():
                 if opciones:
+                    # Fila a fila gana la primera columna con respuesta; las vacías no cuentan
                     val = None
                     for col, fn in opciones:
-                        v = mapear(ch[col], fn)
+                        crudo = ch[col] if col == '__edad' else ch[col].replace('', np.nan)
+                        v = mapear(crudo, fn).where(crudo.notna())
                         val = v if val is None else val.combine_first(v)
+                    # Si nadie respondió, se aplica la regla de la variable para el vacío (p. ej. etnia vacía = 0)
+                    try:
+                        relleno = opciones[-1][1]('')
+                    except Exception:
+                        relleno = np.nan
+                    if not pd.isna(relleno):
+                        val = val.fillna(relleno)
                     ch[b] = val
                     ch[b + '__c'] = ch[b].notna().astype(float)
                     medidas += [b, b + '__c']
