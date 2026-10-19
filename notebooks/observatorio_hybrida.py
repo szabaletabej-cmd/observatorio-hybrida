@@ -175,7 +175,7 @@ def buscar_col(cols, *opciones, excluir=()):
 def primera(cols, candidatos):
     """Primera columna presente según el orden de 'candidatos' (nombres normalizados)."""
     ncols = {norm(c): c for c in cols}
-    return next((ncols[k] for k in candidatos if k in ncols), None)
+    return next((ncols[norm(k)] for k in candidatos if norm(k) in ncols), None)
 
 def anio_desde(texto):
     m = re.search(r'(20\d{2})', str(texto))
@@ -544,6 +544,54 @@ def cargar_mintic_internet():
 # Calcula por departamento-año: número de evaluados, promedio de cada puntaje y % de hogares con internet/computador (cuando la prueba lo trae). Todo por bloques para no llenar la memoria.
 
 # %%
+# ---------- Enfoque diferencial (Icfes): etnia, discapacidad, nacionalidad, edad, trabajo ----------
+def mapear(s, fn):
+    """Aplica fn sobre los valores únicos (mucho más rápido que .map(fn) en millones de filas)."""
+    u = s.drop_duplicates()
+    return s.map({x: fn(x) for x in u})
+
+def cat_etnia(v):
+    v = norm_val(v)
+    if not v: return 'Sin información'
+    if 'NINGUN' in v or v in ('NO', 'N'): return 'Ninguno'
+    if 'INDIGEN' in v: return 'Indígena'
+    if any(k in v for k in ('AFRO', 'NEGR', 'PALENQ', 'RAIZAL')): return 'Afro, negro, raizal o palenquero'
+    if 'ROM' in v or 'GITAN' in v: return 'Rrom'
+    if v in ('SI', 'S'): return 'Grupo étnico (sin especificar)'
+    return 'Otro grupo étnico'
+
+def bin_etnia(v):
+    c = cat_etnia(v)
+    return np.nan if c == 'Sin información' else (0.0 if c == 'Ninguno' else 1.0)
+
+def bin_discapacidad(v):
+    v = norm_val(v)
+    if not v: return np.nan
+    if v in ('N', 'NO') or 'NINGUN' in v or v.startswith('NO '): return 0.0
+    return 1.0
+
+def cat_discapacidad(v):
+    b = bin_discapacidad(v)
+    return 'Sin información' if pd.isna(b) else ('Con discapacidad' if b else 'Sin discapacidad')
+
+def bin_extranjero(v):
+    v = norm_val(v)
+    if not v: return np.nan
+    return 0.0 if 'COLOMBIA' in v else 1.0
+
+def bin_trabaja(v):
+    v = norm_val(v)
+    if not v: return np.nan
+    return 0.0 if (v in ('0', 'NO', 'NINGUNA') or v.startswith('0 ')) else 1.0
+
+def edad_s11(e):
+    if pd.isna(e): return 'Sin información'
+    return '16 años o menos' if e <= 16 else ('17 a 18 años' if e <= 18 else '19 años o más')
+
+def edad_tyt(e):
+    if pd.isna(e): return 'Sin información'
+    return 'Menos de 25 años' if e < 25 else ('25 a 34 años' if e < 35 else '35 años o más')
+
 def cargar_icfes(fuente, prefijo, cand_depto_cod, cand_depto_nom, cand_dims, cand_binarias):
     partes = []
     for ruta in archivos(fuente, ('txt', 'csv')):
@@ -554,12 +602,20 @@ def cargar_icfes(fuente, prefijo, cand_depto_cod, cand_depto_nom, cand_dims, can
             sel['cod'] = f.get('depto_cod') or primera(cols, cand_depto_cod)
             sel['periodo'] = buscar_col(cols, 'periodo')
             sel['puntajes'] = [c for c in cols if re.search(r'(^punt_|_punt$|^punt_global)', norm(c)) and 'desemp' not in norm(c) and 'percentil' not in norm(c)]
-            sel['dims'] = {d: primera(cols, opts) for d, (opts, _) in cand_dims.items()}
-            sel['bins'] = {b: primera(cols, [opt]) for b, opt in cand_binarias.items()}
+            sel['nac'] = primera(cols, ['estu_fechanacimiento'])
+            virtuales = list(cols) + (['__edad'] if sel['nac'] else [])
+            # Cada dimensión o binaria puede venir en varias columnas según el año: se usan todas las
+            # presentes y, fila a fila, gana la primera con dato (algunas columnas existen pero vienen vacías).
+            sel['dims'] = {d: [c for c in (primera(virtuales, [o]) for o in opts) if c] for d, (opts, _) in cand_dims.items()}
+            sel['bins'] = {}
+            for b, spec in cand_binarias.items():
+                opciones = [(spec, si_no)] if isinstance(spec, str) else spec
+                sel['bins'][b] = [(primera(virtuales, [c]), f) for c, f in opciones if primera(virtuales, [c])]
             if ruta == archivos(fuente, ('txt', 'csv'))[0]:
                 print(f'  columnas {fuente}:', {k: v for k, v in sel.items() if k != 'puntajes'}, '| puntajes:', sel['puntajes'])
-            return [sel['cod'], sel['nom'], sel['periodo'], *sel['puntajes'],
-                    *[v for v in sel['dims'].values() if v], *[v for v in sel['bins'].values() if v]]
+            todas = [sel['cod'], sel['nom'], sel['periodo'], sel['nac'], *sel['puntajes'],
+                     *[c for v in sel['dims'].values() for c in v], *[c for v in sel['bins'].values() for c, _ in v]]
+            return list(dict.fromkeys(c for c in todas if c and c != '__edad'))
         _, lector = leer_texto_por_bloques(ruta, usecols)
         acum, n = [], 0
         anio_archivo = anio_desde(os.path.basename(ruta))
@@ -567,20 +623,35 @@ def cargar_icfes(fuente, prefijo, cand_depto_cod, cand_depto_nom, cand_dims, can
             n += len(ch)
             ch = armonizar_depto(ch, sel['cod'], sel['nom'])
             ch['anio'] = anio_archivo or (ch[sel['periodo']].str[:4].astype(float) if sel['periodo'] else np.nan)
+            if sel['nac']:
+                nac = pd.to_numeric(ch[sel['nac']].astype(str).str.extract(r'((?:19|20)\d{2})')[0], errors='coerce')
+                edad = ch['anio'] - nac
+                ch['__edad'] = edad.where((edad >= 10) & (edad <= 80))
             ch['__n'] = 1.0
             medidas = ['__n']
             for p in sel['puntajes']:
                 ch[p] = a_numero(ch[p])
                 ch[p + '__c'] = ch[p].notna().astype(float)
                 medidas += [p, p + '__c']
-            for b, col in sel['bins'].items():
-                if col:
-                    ch[b] = ch[col].map(si_no)
+            for b, opciones in sel['bins'].items():
+                if opciones:
+                    val = None
+                    for col, fn in opciones:
+                        v = mapear(ch[col], fn)
+                        val = v if val is None else val.combine_first(v)
+                    ch[b] = val
                     ch[b + '__c'] = ch[b].notna().astype(float)
                     medidas += [b, b + '__c']
             ch['__tot'] = 'Total'
-            for d, col in [('total', '__tot')] + [(d, c) for d, c in sel['dims'].items() if c]:
-                cat = ch[col] if d == 'total' else ch[col].map(cand_dims[d][1])
+            for d, cols_d in [('total', ['__tot'])] + [(d, c) for d, c in sel['dims'].items() if c]:
+                if d == 'total':
+                    cat = ch['__tot']
+                else:
+                    crudo = None
+                    for col in cols_d:
+                        v = ch[col] if col == '__edad' else ch[col].replace('', np.nan)
+                        crudo = v if crudo is None else crudo.combine_first(v)
+                    cat = mapear(crudo, cand_dims[d][1])
                 g = ch.assign(categoria=cat).groupby(['anio', 'cod_depto', 'categoria'])[medidas].sum().reset_index()
                 g['desagregacion'] = d
                 acum.append(g)
@@ -591,8 +662,8 @@ def cargar_icfes(fuente, prefijo, cand_depto_cod, cand_depto_nom, cand_dims, can
         for p in sel['puntajes']:
             t = d[base_cols].copy(); t['indicador'] = f'{prefijo}_{norm(p)}_prom'
             t['valor'] = d[p] / d[p + '__c'].replace(0, np.nan); filas.append(t)
-        for b, col in sel['bins'].items():
-            if col:
+        for b, opciones in sel['bins'].items():
+            if opciones:
                 t = d[base_cols].copy(); t['indicador'] = f'{prefijo}_pct_{b}'
                 t['valor'] = 100 * d[b] / d[b + '__c'].replace(0, np.nan); filas.append(t)
         partes.append(pd.concat(filas)[COLS_LARGO])
@@ -608,8 +679,17 @@ def cargar_saber_11():
         cand_dims={'naturaleza': (['cole_naturaleza'], cat_sector),
                    'zona': (['cole_area_ubicacion'], cat_zona),
                    'sexo': (['estu_genero'], cat_sexo),
-                   'estrato': (['fami_estratovivienda'], cat_estrato)},
-        cand_binarias={'internet_hogar': 'fami_tieneinternet', 'computador_hogar': 'fami_tienecomputador'},
+                   'estrato': (['fami_estratovivienda'], cat_estrato),
+                   'etnia': (['estu_grupoetnia', 'estu_etnia'], cat_etnia),
+                   'discapacidad': (['estu_discapacidad'], cat_discapacidad),
+                   'grupo_edad': (['__edad'], edad_s11)},
+        cand_binarias={'internet_hogar': 'fami_tieneinternet', 'computador_hogar': 'fami_tienecomputador',
+                       'etnia': [('estu_tieneetnia', si_no), ('estu_grupoetnia', bin_etnia), ('estu_etnia', bin_etnia)],
+                       'discapacidad': [('estu_discapacidad', bin_discapacidad)],
+                       'extranjero': [('estu_nacionalidad', bin_extranjero)],
+                       'campesino': [('estu_comunidadcampesina', si_no)],
+                       'trabaja': [('estu_horassemanatrabaja', bin_trabaja)],
+                       'extraedad': [('__edad', lambda e: np.nan if pd.isna(e) else float(e >= 19))]},
     )
 
 def cargar_saber_tyt():
@@ -621,8 +701,16 @@ def cargar_saber_tyt():
         cand_dims={'sexo': (['estu_genero'], cat_sexo),
                    'estrato': (['fami_estratovivienda'], cat_estrato),
                    'naturaleza': (['inst_origen'], cat_sector),
-                   'modalidad': (['estu_metodo_prgm'], cat_modalidad)},
-        cand_binarias={'internet_hogar': 'fami_tieneinternet', 'computador_hogar': 'fami_tienecomputador'},
+                   'modalidad': (['estu_metodo_prgm'], cat_modalidad),
+                   'etnia': (['estu_grupoetnia', 'estu_etnia'], cat_etnia),
+                   'discapacidad': (['estu_discapacidad'], cat_discapacidad),
+                   'grupo_edad': (['__edad'], edad_tyt)},
+        cand_binarias={'internet_hogar': 'fami_tieneinternet', 'computador_hogar': 'fami_tienecomputador',
+                       'etnia': [('estu_tieneetnia', si_no), ('estu_grupoetnia', bin_etnia), ('estu_etnia', bin_etnia)],
+                       'discapacidad': [('estu_discapacidad', bin_discapacidad)],
+                       'extranjero': [('estu_nacionalidad', bin_extranjero)],
+                       'trabaja': [('estu_horassemanatrabaja', bin_trabaja)],
+                       'mayor_25': [('__edad', lambda e: np.nan if pd.isna(e) else float(e >= 25))]},
     )
 
 # %% [markdown]
@@ -700,6 +788,14 @@ intentar(proporcion, 'mintic_pct_residencial_1_2', serie('mintic_accesos_interne
 intentar(brecha, 's11_brecha_oficial_privado', 's11_punt_global_prom', 'naturaleza', 'Oficial', 'Privado')
 intentar(brecha, 's11_brecha_rural_urbana', 's11_punt_global_prom', 'zona', 'Rural', 'Urbana')
 intentar(brecha, 's11_brecha_internet_estrato', 's11_pct_internet_hogar', 'estrato', 'Estrato 1-2', 'Estrato 5-6')
+# Representación: mujeres entre evaluados y brechas de puntaje por sexo, etnia y discapacidad
+intentar(proporcion, 's11_pct_mujeres', serie('s11_evaluados', 'sexo', 'Mujer'), serie('s11_evaluados', 'sexo', 'Mujer').add(serie('s11_evaluados', 'sexo', 'Hombre'), fill_value=0))
+intentar(proporcion, 'tyt_pct_mujeres', serie('tyt_evaluados', 'sexo', 'Mujer'), serie('tyt_evaluados', 'sexo', 'Mujer').add(serie('tyt_evaluados', 'sexo', 'Hombre'), fill_value=0))
+intentar(brecha, 's11_brecha_sexo', 's11_punt_global_prom', 'sexo', 'Mujer', 'Hombre')
+intentar(brecha, 'tyt_brecha_sexo', 'tyt_punt_global_prom', 'sexo', 'Mujer', 'Hombre')
+intentar(brecha, 's11_brecha_discapacidad', 's11_punt_global_prom', 'discapacidad', 'Con discapacidad', 'Sin discapacidad')
+for _g, _slug in [('Indígena', 'indigena'), ('Afro, negro, raizal o palenquero', 'afro')]:
+    intentar(brecha, f's11_brecha_{_slug}', 's11_punt_global_prom', 'etnia', _g, 'Ninguno')
 
 if derivados:
     panel = pd.concat([panel] + derivados, ignore_index=True)
@@ -739,6 +835,25 @@ CATALOGO = [
     ('tyt_evaluados', 'Evaluados Saber TyT', 'Reconocimiento', 'personas', 'Icfes – DataIcfes', 'Evaluados del año por departamento donde se ofrece el programa.'),
     ('tyt_pct_internet_hogar', 'Evaluados TyT con internet en el hogar', 'Redistribución', '%', 'Icfes – DataIcfes', 'Respuestas "Sí" / respuestas válidas × 100.'),
     ('tyt_pct_computador_hogar', 'Evaluados TyT con computador en el hogar', 'Redistribución', '%', 'Icfes – DataIcfes', 'Respuestas "Sí" / respuestas válidas × 100.'),
+    # Representación · enfoque diferencial (autorreportado en el formulario del Icfes)
+    ('s11_pct_mujeres', 'Mujeres entre los evaluados de Saber 11', 'Representación', '%', 'Icfes – DataIcfes', 'Evaluadas mujeres / (mujeres + hombres) × 100.'),
+    ('tyt_pct_mujeres', 'Mujeres entre los evaluados de Saber TyT', 'Representación', '%', 'Icfes – DataIcfes', 'Evaluadas mujeres / (mujeres + hombres) × 100.'),
+    ('s11_pct_etnia', 'Bachilleres que se reconocen de un grupo étnico', 'Representación', '%', 'Icfes – DataIcfes', 'Evaluados que se reconocen indígenas, afro, raizales, palenqueros, Rrom u otro grupo / respuestas válidas × 100.'),
+    ('tyt_pct_etnia', 'Evaluados TyT que se reconocen de un grupo étnico', 'Representación', '%', 'Icfes – DataIcfes', 'Evaluados que se reconocen de un grupo étnico / respuestas válidas × 100.'),
+    ('s11_pct_discapacidad', 'Bachilleres con discapacidad', 'Representación', '%', 'Icfes – DataIcfes', 'Evaluados que reportan alguna discapacidad / respuestas válidas × 100.'),
+    ('tyt_pct_discapacidad', 'Evaluados TyT con discapacidad', 'Representación', '%', 'Icfes – DataIcfes', 'Evaluados que reportan alguna discapacidad / respuestas válidas × 100.'),
+    ('s11_pct_extranjero', 'Bachilleres de nacionalidad extranjera', 'Representación', '%', 'Icfes – DataIcfes', 'Evaluados con nacionalidad distinta a la colombiana / respuestas válidas × 100. Aproxima la población migrante en el sistema escolar.'),
+    ('tyt_pct_extranjero', 'Evaluados TyT de nacionalidad extranjera', 'Representación', '%', 'Icfes – DataIcfes', 'Evaluados con nacionalidad distinta a la colombiana / respuestas válidas × 100.'),
+    ('s11_pct_campesino', 'Bachilleres que se reconocen como campesinos', 'Representación', '%', 'Icfes – DataIcfes', 'Evaluados que se reconocen parte de una comunidad campesina / respuestas válidas × 100. Pregunta reciente.'),
+    ('s11_pct_extraedad', 'Bachilleres en extraedad (19 años o más)', 'Representación', '%', 'Icfes – DataIcfes', 'Evaluados con 19 años o más en el año de la prueba / evaluados con edad válida × 100.'),
+    ('tyt_pct_mayor_25', 'Evaluados TyT de 25 años o más', 'Representación', '%', 'Icfes – DataIcfes', 'Evaluados con 25 años o más / evaluados con edad válida × 100.'),
+    ('s11_pct_trabaja', 'Bachilleres que trabajan', 'Representación', '%', 'Icfes – DataIcfes', 'Evaluados que reportan horas de trabajo a la semana / respuestas válidas × 100.'),
+    ('tyt_pct_trabaja', 'Evaluados TyT que trabajan', 'Representación', '%', 'Icfes – DataIcfes', 'Evaluados que reportan horas de trabajo a la semana / respuestas válidas × 100.'),
+    ('s11_brecha_sexo', 'Brecha Saber 11 mujeres – hombres', 'Representación', 'puntos', 'Icfes – DataIcfes', 'Puntaje global promedio de mujeres − hombres.'),
+    ('tyt_brecha_sexo', 'Brecha Saber TyT mujeres – hombres', 'Representación', 'puntos', 'Icfes – DataIcfes', 'Puntaje global promedio de mujeres − hombres.'),
+    ('s11_brecha_discapacidad', 'Brecha Saber 11 con – sin discapacidad', 'Representación', 'puntos', 'Icfes – DataIcfes', 'Puntaje global promedio de evaluados con discapacidad − sin discapacidad.'),
+    ('s11_brecha_indigena', 'Brecha Saber 11 indígenas – sin pertenencia étnica', 'Representación', 'puntos', 'Icfes – DataIcfes', 'Puntaje global promedio de evaluados indígenas − evaluados sin pertenencia étnica.'),
+    ('s11_brecha_afro', 'Brecha Saber 11 afro – sin pertenencia étnica', 'Representación', 'puntos', 'Icfes – DataIcfes', 'Puntaje global promedio de evaluados afro, negros, raizales o palenqueros − sin pertenencia étnica.'),
 ]
 cat = pd.DataFrame(CATALOGO, columns=['indicador', 'nombre', 'dimension', 'unidad', 'fuente', 'definicion'])
 

@@ -95,6 +95,7 @@ export const NOMBRES_DESAG = {
   sector: "Sector de la IES", naturaleza: "Naturaleza del colegio o IES", modalidad: "Modalidad",
   nivel_academico: "Nivel académico", nivel_formacion: "Nivel de formación", sexo: "Sexo",
   zona: "Zona", estrato: "Estrato", tecnologia: "Tecnología", segmento: "Segmento",
+  etnia: "Pertenencia étnica", discapacidad: "Discapacidad", grupo_edad: "Grupo de edad",
 };
 
 export const ORDEN_DIM = ["Redistribución", "Reconocimiento", "Representación"];

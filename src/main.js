@@ -29,7 +29,7 @@ const VISTAS = [
 const BAJADAS = {
   "Redistribución": "Acceso material a la educación y a la conectividad: quién llega a la educación superior, en qué condiciones y con qué recursos en el hogar.",
   "Reconocimiento": "Resultados y valoración de los aprendizajes: cómo se distribuyen los puntajes de las pruebas de Estado y la graduación entre territorios.",
-  "Representación": "Quién está presente y con qué peso en el sistema: participación de mujeres y otros grupos en la matrícula.",
+  "Representación": "Quién está presente y con qué peso en el sistema: mujeres, grupos étnicos, personas con discapacidad, población extranjera, campesina, en extraedad o que trabaja, y las brechas de resultados entre esos grupos. Los datos de enfoque diferencial vienen del formulario que diligencian quienes presentan las pruebas del Icfes.",
 };
 
 const PANORAMA_MAPAS = ["snies_pct_virtual_distancia", "s11_punt_global_prom", "s11_pct_internet_hogar", "mintic_pct_fibra"];
