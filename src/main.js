@@ -9,6 +9,7 @@ import {cargarDatos, formatear, signoPct, NOMBRES_DESAG, ORDEN_DIM} from "./dato
 import {mapa, ranking, evolucion, desagregacion, dispersion, matrizCorrelacion, vacio, paleta} from "./graficos.js";
 import {GRUPOS, GUIA, FUENTES, RECOLECCION} from "./guia.js";
 import {botonImagen, crearBuscador, recorrido, recorridoPrimeraVez} from "./extras.js";
+import {visible} from "./publicacion.js";
 
 const VISTAS = [
   {ruta: "esencial", nombre: "Lo esencial"},
@@ -466,8 +467,9 @@ function vistaMetodologia(main) {
 
 // ---------- enrutador ----------
 function render() {
-  const ruta = location.hash.replace(/^#\/?/, "") || "esencial";
-  const vista = VISTAS.find((v) => v.ruta === ruta) ?? VISTAS[0];
+  const VIS = VISTAS.filter((v) => visible(v.ruta));
+  const ruta = location.hash.replace(/^#\/?/, "") || VIS[0].ruta;
+  const vista = VIS.find((v) => v.ruta === ruta) ?? VIS[0];
   document.querySelectorAll(".nav a").forEach((a) => a.setAttribute("aria-current", a.dataset.ruta === vista.ruta ? "page" : "false"));
   const main = document.querySelector("main");
   const y = scrollY;
@@ -491,7 +493,7 @@ function render() {
 
 async function iniciar() {
   const nav = document.querySelector(".nav");
-  for (const v of VISTAS) nav.append(el("a", {href: `#/${v.ruta}`, "data-ruta": v.ruta}, v.nombre));
+  for (const v of VISTAS.filter((x) => visible(x.ruta))) nav.append(el("a", {href: `#/${v.ruta}`, "data-ruta": v.ruta}, v.nombre));
   const main = document.querySelector("main");
   main.append(el("p", {class: "vacio"}, "Cargando datos…"));
   try {
@@ -503,11 +505,15 @@ async function iniciar() {
   }
   const abrirBuscador = crearBuscador({D, GUIA,
     irAIndicador: (ind) => irA(D.info.get(ind), ind),
-    irADepto: (cod) => { estado.dep = cod; if (location.hash === "#/esencial") render(); else location.hash = "#/esencial"; }});
+    irADepto: (cod) => {
+      estado.dep = cod;
+      const destino = visible("esencial") ? "esencial" : (VISTAS.find((v) => v.dim && location.hash === `#/${v.ruta}`)?.ruta ?? "redistribucion");
+      if (location.hash === `#/${destino}`) render(); else location.hash = `#/${destino}`;
+    }});
   nav.after(el("div", {class: "herramientas"},
     el("button", {class: "herr herr-buscar", type: "button", title: "Buscar (tecla /)", "aria-label": "Buscar indicadores y departamentos", onclick: abrirBuscador},
       svgIcono('<circle cx="7" cy="7" r="4.5"/><path d="M10.5 10.5 14 14"/>'), el("span", {}, "Buscar indicador o departamento"), el("kbd", {}, "/")),
-    el("button", {class: "herr herr-ayuda", type: "button", title: "Cómo usar el tablero", "aria-label": "Cómo usar el tablero", onclick: () => { if (!/esencial/.test(location.hash) && location.hash) { location.hash = "#/esencial"; setTimeout(recorrido, 400); } else recorrido(); }},
+    el("button", {class: "herr herr-ayuda", type: "button", title: "Cómo usar el tablero", "aria-label": "Cómo usar el tablero", onclick: () => recorrido()},
       svgIcono('<circle cx="8" cy="8" r="6.5"/><path d="M6.2 6.3a1.9 1.9 0 1 1 2.6 1.8c-.5.2-.8.6-.8 1.1v.4"/><circle cx="8" cy="11.6" r=".4" fill="currentColor"/>'))));
   const altoCab = () => document.documentElement.style.setProperty("--alto-cab", document.querySelector(".cabecera").offsetHeight + "px");
   altoCab();
@@ -523,7 +529,7 @@ async function iniciar() {
   });
   matchMedia("(prefers-color-scheme: dark)").addEventListener("change", render);
   render();
-  if (!location.hash || /esencial/.test(location.hash)) recorridoPrimeraVez();
+  recorridoPrimeraVez();
 }
 
 function svgIcono(trazos) {

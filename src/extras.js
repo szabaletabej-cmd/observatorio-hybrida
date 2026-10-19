@@ -129,12 +129,15 @@ const CLAVE_TOUR = "hybrida-tour-visto";
 export function recorrido() {
   const pasos = [
     {popover: {title: "Bienvenida al Observatorio", description: "Un recorrido de un minuto por lo principal. Puedes salir cuando quieras con Esc."}},
-    {element: ".nav", popover: {title: "Secciones", description: "<b>Lo esencial</b> resume 12 indicadores. Las pestañas de la tríada (Redistribución, Reconocimiento y Representación) tienen todos los indicadores con mapas y desagregaciones. <b>Cruces</b> compara dos indicadores."}},
+    {element: ".nav", popover: {title: "Secciones", description: "Los indicadores se organizan en la tríada <b>Redistribución</b>, <b>Reconocimiento</b> y <b>Representación</b>. En <b>Metodología</b> están las fuentes y las fichas técnicas."}},
+    {element: ".filtros .filtro", popover: {title: "Elige el indicador", description: "Cada pestaña tiene varios indicadores. Debajo verás su definición, su fuente y para qué sirve."}},
+    {element: ".filtros input[type=range]", popover: {title: "Año y departamento", description: "Mueve el año y elige un departamento para resaltarlo en el mapa, el ranking y la evolución."}},
+    {element: ".tarjeta .boton-img", popover: {title: "Descarga lo que necesites", description: "Cada mapa y gráfico se puede bajar como imagen con el botón <b>PNG</b>."}},
     {element: ".filtros-clave .filtro", popover: {title: "Elige un departamento", description: "Las tarjetas pasan a mostrar las cifras del departamento en lugar de las nacionales."}},
     {element: ".chips", popover: {title: "Filtra por tema", description: "Acceso, aprendizaje, conectividad o participación."}},
     {element: ".clave", popover: {title: "Cada tarjeta es un indicador", description: "Cifra más reciente, tendencia y cambio desde el primer año. Haz clic para abrir su <b>ficha técnica</b>: definición, cálculo, fuente, limitaciones y mapa."}},
     {element: ".herr-buscar", popover: {title: "Buscador", description: "Encuentra cualquier indicador o departamento. Atajo: tecla <b>/</b> o Ctrl + K."}},
-    {element: ".herr-ayuda", popover: {title: "Vuelve a ver este recorrido", description: "Aquí. Y en mapas, gráficos y fichas encontrarás el botón <b>PNG</b> para descargarlos como imagen."}},
+    {element: ".herr-ayuda", popover: {title: "Vuelve a ver este recorrido", description: "Cuando quieras, desde este botón."}},
   ].filter((p) => !p.element || document.querySelector(p.element));
   const d = driver({
     showProgress: true,
