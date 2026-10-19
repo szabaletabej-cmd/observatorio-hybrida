@@ -140,6 +140,28 @@ export const GUIA = {
   },
 };
 
+// Representación: para qué sirve cada indicador de enfoque diferencial (se muestra en la pestaña)
+Object.assign(GUIA, {
+  s11_pct_mujeres: {corto: "Mujeres entre quienes presentan Saber 11", para: "Muestra si mujeres y hombres llegan en igual proporción al final del colegio. Una cifra baja puede indicar deserción femenina antes de grado 11."},
+  tyt_pct_mujeres: {corto: "Mujeres entre quienes presentan Saber TyT", para: "Indica la participación de las mujeres en la formación técnica y tecnológica."},
+  s11_pct_etnia: {corto: "Bachilleres de grupos étnicos", para: "Dimensiona la presencia de población indígena, afro, raizal, palenquera y Rrom entre quienes terminan el colegio. Ayuda a leer las brechas con enfoque étnico."},
+  tyt_pct_etnia: {corto: "Evaluados TyT de grupos étnicos", para: "Dimensiona la presencia de grupos étnicos en la formación técnica y tecnológica."},
+  s11_pct_discapacidad: {corto: "Bachilleres con discapacidad", para: "Muestra cuántas personas con discapacidad llegan a presentar la prueba al final del colegio. Es un indicador de inclusión del sistema escolar."},
+  tyt_pct_discapacidad: {corto: "Evaluados TyT con discapacidad", para: "Muestra la inclusión de personas con discapacidad en la formación técnica y tecnológica."},
+  s11_pct_extranjero: {corto: "Bachilleres de nacionalidad extranjera", para: "Aproxima la llegada de población migrante, sobre todo venezolana, al final del colegio."},
+  tyt_pct_extranjero: {corto: "Evaluados TyT de nacionalidad extranjera", para: "Aproxima la población migrante en la formación técnica y tecnológica."},
+  s11_pct_campesino: {corto: "Bachilleres que se reconocen campesinos", para: "Visibiliza a la población campesina. La pregunta es reciente, por eso solo hay datos desde 2025."},
+  s11_pct_extraedad: {corto: "Bachilleres en extraedad", para: "Personas con 19 años o más al presentar la prueba. Señala rezago escolar por repitencia, ingreso tardío o interrupciones."},
+  tyt_pct_mayor_25: {corto: "Evaluados TyT de 25 años o más", para: "Muestra cuánto atiende la formación técnica a personas adultas que estudian más tarde o mientras trabajan."},
+  s11_pct_trabaja: {corto: "Bachilleres que trabajan", para: "Indica cuántos estudiantes combinan el colegio con trabajo, un factor asociado a menores resultados y a deserción."},
+  tyt_pct_trabaja: {corto: "Evaluados TyT que trabajan", para: "Muestra cuántos estudiantes técnicos y tecnológicos estudian y trabajan a la vez."},
+  s11_brecha_sexo: {corto: "Brecha de puntaje entre mujeres y hombres", para: "Negativo significa que las mujeres obtienen en promedio menos puntaje que los hombres en Saber 11."},
+  tyt_brecha_sexo: {corto: "Brecha TyT entre mujeres y hombres", para: "Negativo significa que las mujeres obtienen en promedio menos puntaje que los hombres en Saber TyT."},
+  s11_brecha_discapacidad: {corto: "Brecha de puntaje por discapacidad", para: "Diferencia de puntaje entre quienes tienen discapacidad y quienes no. Negativo indica desventaja para las personas con discapacidad."},
+  s11_brecha_indigena: {corto: "Brecha de puntaje de estudiantes indígenas", para: "Diferencia frente a quienes no pertenecen a un grupo étnico. Negativo indica desventaja."},
+  s11_brecha_afro: {corto: "Brecha de puntaje de estudiantes afro", para: "Diferencia de estudiantes afro, negros, raizales o palenqueros frente a quienes no pertenecen a un grupo étnico. Negativo indica desventaja."},
+});
+
 export const RECOLECCION = [
   [/^snies_/, "Registros administrativos que reportan las instituciones de educación superior al Ministerio de Educación (SNIES)."],
   [/^s11_/, "Microdatos del examen Saber 11 y del formulario sociodemográfico que diligencia cada estudiante (Icfes, DataIcfes)."],
